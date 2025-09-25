@@ -58,7 +58,7 @@ app.get('/api/news', async (req, res) => {
       data: result.structuredContent,
     });
   } catch (error) {
-    console.error('Search purchase history error:', error);
+    console.error('Get News Error:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
