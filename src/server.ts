@@ -1,14 +1,14 @@
+import './server/instrument.js';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { settings } from './server/config.js';
 import { getLocation } from './server/locationService.js';
-
-dotenv.config();
+import * as Sentry from '@sentry/node';
+import { Logger } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +23,18 @@ app.use(express.json());
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/sentry/config', (_, res) => {
+  console.log('Sentry config:', settings.SENTRY_DSN, settings.NODE_ENV);
+  res.json({
+    dsn: settings.SENTRY_DSN,
+    environment: settings.NODE_ENV,
+  });
+});
+
+app.get('/test-error', (_, res) => {
+  throw new Error('Test error');
 });
 
 // API Routes
@@ -58,13 +70,42 @@ app.get('/api/news', async (req, res) => {
       data: result.structuredContent,
     });
   } catch (error) {
-    console.error('Get News Error:', error);
+    Logger.error('Get News Error:', error as Error, {
+      req,
+    });
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
+
+Sentry.setupExpressErrorHandler(app);
+
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    next: express.NextFunction
+  ) => {
+    Logger.error('Unhandled server error', err, {
+      component: 'server',
+      operation: 'fallback-error-handler',
+      url: req.url,
+      method: req.method,
+    });
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: err.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
 
 // Serve static files only in production
 if (process.env.NODE_ENV === 'production') {
