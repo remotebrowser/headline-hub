@@ -10,8 +10,8 @@ if [ -n "${TAILSCALE_AUTHKEY}" ]; then
         # Give tailscaled a moment to initialize
         sleep 2
         echo "Authenticating with Tailscale in background..."
-        /app/tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=data-portrait --accept-routes
-        
+        /app/tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=headline-hub --accept-routes
+
         # Log status for monitoring
         echo "=== Tailscale Status ===" 
         /app/tailscale status
