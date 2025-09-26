@@ -26,7 +26,7 @@ export class Logger {
   static error(message: string, error?: Error, context?: LogContext) {
     console.error(
       `[ERROR] ${message}`,
-      error?.message || '',
+      error || '',
       context ? JSON.stringify(context, null, 2) : ''
     );
 

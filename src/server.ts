@@ -65,6 +65,7 @@ app.get('/api/news', async (req, res) => {
     const result = await client.callTool({
       name: 'npr_get_headlines',
     });
+
     Logger.info('Got response from MCP Server', {
       content: `${JSON.stringify(result).slice(0, 250)}...`,
     });
@@ -73,9 +74,7 @@ app.get('/api/news', async (req, res) => {
       data: result.structuredContent,
     });
   } catch (error) {
-    Logger.error('Get News Error:', error as Error, {
-      req,
-    });
+    Logger.error('Get News Error:', error as Error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
