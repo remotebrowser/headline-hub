@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './routes';
@@ -20,6 +20,7 @@ async function fetchSentryConfig(): Promise<SentryConfig | null> {
     }
     const config = await response.json();
     return config;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     return null;
   }

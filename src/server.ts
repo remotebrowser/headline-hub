@@ -33,38 +33,41 @@ app.get('/api/sentry/config', (_, res) => {
   });
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.get('/test-error', (_, res) => {
   throw new Error('Test error');
 });
 
 // API Routes
 app.get('/api/news', async (req, res) => {
+  const client = new Client(
+    { name: 'headline-hub-server', version: '1.0.0' },
+    { capabilities: {} }
+  );
   try {
     const location = await getLocation(req);
 
-    const client = new Client(
-      { name: 'headline-hub-server', version: '1.0.0' },
-      { capabilities: {} }
-    );
-
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`${settings.MCP_GETGATHER_URL}/mcp/`),
-      {
-        requestInit: {
-          headers: {
-            'x-incognito': '1',
-            'x-location': location ? JSON.stringify(location) : '',
-          },
+    const mcpUrl = `${settings.MCP_GETGATHER_URL}/mcp/`;
+    const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
+      requestInit: {
+        headers: {
+          'x-incognito': '1',
+          'x-location': location ? JSON.stringify(location) : '',
         },
-      }
-    );
-
+      },
+    });
+    Logger.info('Connecting to MCP Server', {
+      mcpUrl,
+      location,
+    });
     await client.connect(transport);
-
+    Logger.info('Connected to MCP Server');
     const result = await client.callTool({
       name: 'npr_get_headlines',
     });
-
+    Logger.info('Got response from MCP Server', {
+      content: `${JSON.stringify(result).slice(0, 250)}...`,
+    });
     res.json({
       success: true,
       data: result.structuredContent,
@@ -77,6 +80,9 @@ app.get('/api/news', async (req, res) => {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
+  } finally {
+    Logger.info('Disconnecting from MCP Server');
+    await client.close();
   }
 });
 
