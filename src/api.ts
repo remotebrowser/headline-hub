@@ -11,8 +11,9 @@ export type HeadlineItem = {
   link: string;
 };
 
-export type HeadlinesResponse = {
-  headlines: HeadlineItem[];
+export type NewsSourceItem = {
+  id: string;
+  label: string;
 };
 
 export class ApiClient {
@@ -48,8 +49,14 @@ export class ApiClient {
     return result.data as T;
   }
 
-  async getNews(): Promise<HeadlinesResponse> {
-    return this.request<HeadlinesResponse>('/news', {
+  async getNews(source: string): Promise<HeadlineItem[]> {
+    return this.request<HeadlineItem[]>(`/news?source=${source}`, {
+      method: 'GET',
+    });
+  }
+
+  async getNewsSources(): Promise<NewsSourceItem[]> {
+    return this.request<NewsSourceItem[]>(`/news-source`, {
       method: 'GET',
     });
   }

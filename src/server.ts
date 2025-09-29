@@ -5,10 +5,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { settings } from './server/config.js';
+import { newsSources, settings } from './server/config.js';
 import { getLocation } from './server/locationService.js';
 import * as Sentry from '@sentry/node';
 import { Logger } from './utils/logger.js';
+import { HeadlineItem } from './api.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,13 @@ app.get('/test-error', (_, res) => {
   throw new Error('Test error');
 });
 
+app.get('/api/news-source', (_, res) => {
+  res.json({
+    success: true,
+    data: newsSources.map((s) => ({ id: s.id, label: s.label })),
+  });
+});
+
 // API Routes
 app.get('/api/news', async (req, res) => {
   const client = new Client(
@@ -62,16 +70,38 @@ app.get('/api/news', async (req, res) => {
     });
     await client.connect(transport);
     Logger.info('Connected to MCP Server');
+    const source = (req.query.source as string) || 'npr';
+    const newsSource = newsSources.find((s) => s.id === source);
+
+    if (!newsSource) {
+      throw new Error(`News source not found for source: ${source}`);
+    }
+
+    if (!newsSource.toolName) {
+      throw new Error(`Tool name not found for source: ${source}`);
+    }
+
     const result = await client.callTool({
-      name: 'npr_get_headlines',
+      name: newsSource.toolName,
     });
 
     Logger.info('Got response from MCP Server', {
       content: `${JSON.stringify(result).slice(0, 250)}...`,
     });
+
+    const structuredContent = result.structuredContent as Record<
+      string,
+      HeadlineItem[]
+    >;
+
+    const headlines = structuredContent?.[newsSource.dataKey].map((item) => ({
+      ...item,
+      link: `${newsSources.find((s) => s.id === source)?.linkPrefix}${item.link}`,
+    }));
+
     res.json({
       success: true,
-      data: result.structuredContent,
+      data: headlines,
     });
   } catch (error) {
     Logger.error('Get News Error:', error as Error);

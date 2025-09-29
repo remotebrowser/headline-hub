@@ -9,3 +9,20 @@ export const settings = {
   SENTRY_DSN: process.env.SENTRY_DSN || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
 };
+
+export const newsSources = [
+  {
+    id: 'npr',
+    label: 'NPR',
+    toolName: 'npr_get_headlines',
+    dataKey: 'headlines',
+    linkPrefix: 'https://text.npr.org',
+  },
+  {
+    id: 'groundnews',
+    label: 'Ground News',
+    toolName: 'groundnews_get_stories',
+    dataKey: 'stories',
+    linkPrefix: 'https://ground.news',
+  },
+];
