@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+
 const API_BASE_URL = '/api';
 
 type ApiResponse<T> = {
@@ -35,14 +37,18 @@ export class ApiClient {
       ...options,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
     const result: ApiResponse<T> = await response.json();
 
+    if (!response.ok) {
+      const errorMessage = `HTTP ${response.status}: ${response.statusText} ${result.error}`;
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
     if (!result.success) {
-      throw new Error(result.error || 'API request failed');
+      const errorMessage = result.error || 'API request failed';
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
     }
 
     return result.data as T;
