@@ -69,6 +69,15 @@ app.get('/api/news', async (req, res) => {
     Logger.info('Got response from MCP Server', {
       content: `${JSON.stringify(result).slice(0, 250)}...`,
     });
+
+    if (result.isError) {
+      res.status(500).json({
+        success: false,
+        error: JSON.stringify(result.content),
+      });
+      return;
+    }
+
     res.json({
       success: true,
       data: result.structuredContent,
