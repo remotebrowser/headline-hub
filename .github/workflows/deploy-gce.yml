@@ -1,0 +1,26 @@
+name: Deploy to GCE Proxy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy to GCE via dokku
+        uses: dokku/github-action@master
+        with:
+          branch: main
+          git_push_flags: --force
+          git_remote_url: ${{ secrets.GCE_GIT_REMOTE_URL }}
+          ssh_host_key: ${{ secrets.GCE_SSH_HOST_KEY }}
+          ssh_private_key: ${{ secrets.GCE_SSH_PRIVATE_KEY }}
