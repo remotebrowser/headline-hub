@@ -1,30 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
-import { apiClient, type NewsSourceItem, type HeadlineItem } from '../api';
+import { useRef, useState } from 'react';
+import { apiClient, type HeadlineItem } from '../api';
 
-const MESSAGES = [
-  'Fetching data…',
-  'Parsing data…',
-  'Extracting headlines…',
-  'Cleaning content…',
-  'Analyzing trends…',
-  'Finalizing…',
-] as const;
+function Button({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="min-w-24 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-white bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+    >
+      {children}
+    </button>
+  );
+}
 
 export function MainPage() {
-  const [newsSources, setNewsSources] = useState<NewsSourceItem[]>([]);
-  const [selectedSource, setSelectedSource] = useState<string | undefined>();
-
   const [isLoading, setIsLoading] = useState(false);
-  const [messageIndex, setMessageIndex] = useState<number>(0);
   const intervalIdRef = useRef<number | null>(null);
   const [headlines, setHeadlines] = useState<HeadlineItem[] | null>(null);
 
   const startLoading = () => {
     setIsLoading(true);
-    setMessageIndex(0);
-    intervalIdRef.current = window.setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
-    }, 2000);
   };
 
   const stopLoading = () => {
@@ -34,116 +37,57 @@ export function MainPage() {
     }
   };
 
-  const handleGetNews = () => {
-    if (!selectedSource) {
-      return;
-    }
+  const handleGetNews = (source: string) => {
     startLoading();
     setHeadlines(null);
     apiClient
-      .getNews(selectedSource)
-      .then((res) => {
-        setHeadlines(res ?? []);
+      .getNews(source)
+      .then((data) => {
+        setHeadlines(data ?? []);
       })
       .finally(() => {
         stopLoading();
       });
   };
 
-  useEffect(() => {
-    apiClient.getNewsSources().then((res) => {
-      setNewsSources(res ?? []);
-      setSelectedSource(res?.[0]?.id);
-    });
-  }, []);
-
-  const disabled = isLoading;
-
   return (
-    <div className="flex-1 w-full py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3">
-            <span aria-hidden className="text-3xl">
-              📰
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
-                Get News
-              </span>
-            </h2>
-          </div>
-          <p className="mt-3 text-gray-600">
-            Select a source and tap below to pull the latest headlines.
-          </p>
-        </div>
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-48">
-            <select
-              value={selectedSource}
-              onChange={(e) =>
-                setSelectedSource(e.target.value as typeof selectedSource)
-              }
-              disabled={isLoading}
-              className="block w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60 disabled:cursor-not-allowed appearance-none cursor-pointer"
-            >
-              {newsSources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.label}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg
-                className="h-4 w-4 fill-current"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-              </svg>
+    <div className="flex-1 w-full py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between gap-8 p-6 rounded-2xl bg-white shadow-sm border border-gray-100">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gray-100 rounded-xl">
+                <span aria-hidden className="text-3xl">
+                  📰
+                </span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                <span className="bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-clip-text text-transparent">
+                  Get News
+                </span>
+              </h2>
             </div>
+            <p className="text-gray-600 text-lg">
+              Tap to pull the latest headlines.
+            </p>
           </div>
-          <div className="text-center">
-            <button
-              onClick={handleGetNews}
-              disabled={disabled}
-              aria-disabled={disabled}
-              aria-busy={isLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 font-semibold text-white bg-neutral-600 hover:bg-neutral-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          <div className="flex items-center gap-2">
+            <Button onClick={() => handleGetNews('npr')} disabled={isLoading}>
+              NPR
+            </Button>
+            <Button
+              onClick={() => handleGetNews('groundnews')}
+              disabled={isLoading}
             >
-              {disabled ? (
-                <>
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-                  <span>
-                    {isLoading ? `${MESSAGES[messageIndex]}` : 'Working…'}
-                  </span>
-                </>
-              ) : (
-                <>Get News</>
-              )}
-            </button>
+              Ground News
+            </Button>
           </div>
         </div>
+        {isLoading && (
+          <div className="flex items-center justify-center mt-10">
+            <div className="spinner"></div>
+          </div>
+        )}
         {headlines && (
           <div className="mt-10">
             <ul className="space-y-3 text-left">
