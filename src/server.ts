@@ -9,7 +9,7 @@ import { newsSources, settings } from './server/config.js';
 import { getLocation } from './server/locationService.js';
 import * as Sentry from '@sentry/node';
 import { Logger } from './utils/logger.js';
-import { HeadlineItem } from './api.js';
+import { HeadlineItem } from './type.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

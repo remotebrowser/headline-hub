@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { apiClient, type HeadlineItem } from '../api';
+import { apiClient } from '../api.js';
+import { HeadlineItem } from '../type.js';
 
 function Button({
   children,
