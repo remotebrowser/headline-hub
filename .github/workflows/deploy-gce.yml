@@ -3,8 +3,6 @@ name: Deploy to GCE Proxy
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   deploy:
@@ -25,4 +23,3 @@ jobs:
           git_remote_url: ${{ secrets.GCE_GIT_REMOTE_URL }}
           ssh_host_key: ${{ secrets.GCE_SSH_HOST_KEY }}
           ssh_private_key: ${{ secrets.GCE_SSH_PRIVATE_KEY }}
-
