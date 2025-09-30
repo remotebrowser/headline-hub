@@ -1,6 +1,6 @@
 # Headline Hub
 
-HeadlineHub is a web app that collects the latest headline news from different websites and shows them all in one place.
+Headline Hub is a web app that collects the latest headline news from different websites and shows them all in one place.
 
 **Live Demo:** https://headline-hub.fly.dev
 
@@ -14,7 +14,7 @@ HeadlineHub is a web app that collects the latest headline news from different w
 Create a `.env` file in the project root with the following variables:
 
 ```env
-GETGATHER_URL=http://localhost:23456
+MCP_GETGATHER_URL=http://localhost:23456
 ```
 
 ## Development
