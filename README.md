@@ -14,7 +14,7 @@ Headline Hub is a web app that collects the latest headline news from different 
 Create a `.env` file in the project root with the following variables:
 
 ```env
-MCP_GETGATHER_URL=http://localhost:23456
+GETGATHER_URL=http://localhost:23456
 ```
 
 ## Development
