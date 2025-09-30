@@ -69,7 +69,7 @@ export function MainPage() {
               </h2>
             </div>
             <p className="text-gray-600 text-lg">
-              Tap to pull the latest headlines.
+              Tap to pull the latest headlines
             </p>
           </div>
           <div className="flex items-center gap-2">
