@@ -89,6 +89,14 @@ app.get('/api/news', async (req, res) => {
       content: `${JSON.stringify(result).slice(0, 250)}...`,
     });
 
+    if (result.isError) {
+      res.status(500).json({
+        success: false,
+        error: JSON.stringify(result.content),
+      });
+      return;
+    }
+
     const structuredContent = result.structuredContent as Record<
       string,
       HeadlineItem[]
