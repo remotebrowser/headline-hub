@@ -1,4 +1,5 @@
 import toast from 'react-hot-toast';
+import { HeadlineItem, NewsSourceItem } from './type.js';
 
 const API_BASE_URL = '/api';
 
@@ -6,16 +7,6 @@ type ApiResponse<T> = {
   success: boolean;
   data?: T;
   error?: string;
-};
-
-export type HeadlineItem = {
-  title: string;
-  link: string;
-};
-
-export type NewsSourceItem = {
-  id: string;
-  label: string;
 };
 
 export class ApiClient {
