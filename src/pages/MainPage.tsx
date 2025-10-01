@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api.js';
 import { HeadlineItem } from '../type.js';
 
@@ -23,9 +24,12 @@ function Button({
 }
 
 export function MainPage() {
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const intervalIdRef = useRef<number | null>(null);
   const [headlines, setHeadlines] = useState<HeadlineItem[] | null>(null);
+
+  const connection = searchParams.get('connection');
 
   const startLoading = () => {
     setIsLoading(true);
@@ -42,7 +46,7 @@ export function MainPage() {
     startLoading();
     setHeadlines(null);
     apiClient
-      .getNews(source)
+      .getNews(source, connection)
       .then((data) => {
         setHeadlines(data ?? []);
       })
