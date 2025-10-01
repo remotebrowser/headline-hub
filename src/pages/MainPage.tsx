@@ -53,7 +53,7 @@ export function MainPage() {
 
   return (
     <div className="flex-1 w-full py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between gap-8 p-6 rounded-2xl bg-white shadow-sm border border-gray-100">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-4">
@@ -81,6 +81,9 @@ export function MainPage() {
               disabled={isLoading}
             >
               Ground News
+            </Button>
+            <Button onClick={() => handleGetNews('cnn')} disabled={isLoading}>
+              CNN
             </Button>
           </div>
         </div>

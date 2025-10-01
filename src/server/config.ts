@@ -25,4 +25,11 @@ export const newsSources = [
     dataKey: 'stories',
     linkPrefix: 'https://ground.news',
   },
+  {
+    id: 'cnn',
+    label: 'CNN',
+    toolName: 'cnn_get_latest_stories',
+    dataKey: 'stories',
+    linkPrefix: 'https://lite.cnn.com',
+  },
 ];
