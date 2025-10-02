@@ -55,7 +55,7 @@ app.get('/api/news', async (req, res) => {
   try {
     const location = await getLocation(req);
 
-    const mcpUrl = `${settings.GETGATHER_URL}/mcp/`;
+    const mcpUrl = `${settings.GETGATHER_URL}/mcp-media/`;
     const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
       requestInit: {
         headers: {
