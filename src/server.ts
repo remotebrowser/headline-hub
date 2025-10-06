@@ -102,14 +102,9 @@ app.get('/api/news', async (req, res) => {
       HeadlineItem[]
     >;
 
-    const headlines = structuredContent?.[newsSource.dataKey].map((item) => ({
-      ...item,
-      link: `${newsSources.find((s) => s.id === source)?.linkPrefix}${item.link}`,
-    }));
-
     res.json({
       success: true,
-      data: headlines,
+      data: structuredContent?.[newsSource.dataKey],
     });
   } catch (error) {
     Logger.error('Get News Error:', error as Error);

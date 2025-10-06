@@ -16,20 +16,17 @@ export const newsSources = [
     label: 'NPR',
     toolName: 'npr_get_headlines',
     dataKey: 'headlines',
-    linkPrefix: 'https://text.npr.org',
   },
   {
     id: 'groundnews',
     label: 'Ground News',
     toolName: 'groundnews_get_stories',
     dataKey: 'stories',
-    linkPrefix: 'https://ground.news',
   },
   {
     id: 'cnn',
     label: 'CNN',
     toolName: 'cnn_get_latest_stories',
     dataKey: 'stories',
-    linkPrefix: 'https://lite.cnn.com',
   },
 ];
