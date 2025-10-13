@@ -1,6 +1,6 @@
 export type HeadlineItem = {
   title: string;
-  link: string;
+  url: string;
 };
 
 export type NewsSourceItem = {

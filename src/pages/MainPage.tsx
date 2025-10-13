@@ -96,9 +96,9 @@ export function MainPage() {
           <div className="mt-10">
             <ul className="space-y-3 text-left">
               {headlines.map((h, idx) => (
-                <li key={`${h.link}-${idx}`} className="group">
+                <li key={`${h.url}-${idx}`} className="group">
                   <a
-                    href={h.link}
+                    href={h.url}
                     target="_blank"
                     rel="noreferrer noopener"
                     className="text-indigo-700 hover:text-indigo-900 underline decoration-indigo-300 group-hover:decoration-indigo-500"
