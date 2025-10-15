@@ -59,7 +59,6 @@ app.get('/api/news', async (req, res) => {
     const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
       requestInit: {
         headers: {
-          'x-incognito': '1',
           'x-location': location ? JSON.stringify(location) : '',
         },
       },
