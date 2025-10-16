@@ -46,8 +46,15 @@ export class ApiClient {
     return result.data as T;
   }
 
-  async getNews(source: string): Promise<HeadlineItem[]> {
-    return this.request<HeadlineItem[]>(`/news?source=${source}`, {
+  async getNews(
+    source: string,
+    connection: string | null
+  ): Promise<HeadlineItem[]> {
+    const params = new URLSearchParams({ source });
+    if (connection) {
+      params.append('connection', connection);
+    }
+    return this.request<HeadlineItem[]>(`/news?${params.toString()}`, {
       method: 'GET',
     });
   }

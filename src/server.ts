@@ -53,6 +53,7 @@ app.get('/api/news', async (req, res) => {
     { capabilities: {} }
   );
   try {
+    const connection = (req.query['connection'] as string) || null;
     const location = await getLocation(req);
 
     const mcpUrl = `${settings.GETGATHER_URL}/mcp-media/`;
@@ -60,6 +61,7 @@ app.get('/api/news', async (req, res) => {
       requestInit: {
         headers: {
           'x-location': location ? JSON.stringify(location) : '',
+          'x-proxy-type': connection || '',
         },
       },
     });
