@@ -82,9 +82,11 @@ app.get('/api/news', async (req, res) => {
       throw new Error(`Tool name not found for source: ${source}`);
     }
 
-    const result = await client.callTool({
-      name: newsSource.toolName,
-    });
+    const result = await client.callTool(
+      { name: newsSource.toolName },
+      undefined, // skip the progress handler
+      { timeout: 300000 } // set a custom timeout
+    );
 
     Logger.info('Got response from MCP Server', {
       content: `${JSON.stringify(result).slice(0, 250)}...`,
