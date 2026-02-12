@@ -10,6 +10,8 @@ import { getLocation } from './server/locationService.js';
 import * as Sentry from '@sentry/node';
 import { Logger } from './utils/logger.js';
 import { HeadlineItem } from './type.js';
+import session, { SessionData } from 'express-session';
+import * as nanoid from 'nanoid';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +22,22 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(
+  session({
+    genid: function () {
+      const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
+      return nanoid.customAlphabet(FRIENDLY_CHARS, 6)();
+    },
+    secret: '1234567890',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: settings.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -60,6 +78,7 @@ app.get('/api/news', async (req, res) => {
     const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
       requestInit: {
         headers: {
+          Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${req.sessionID}`,
           'x-location': location ? JSON.stringify(location) : '',
           'x-proxy-type': connection || '',
         },
