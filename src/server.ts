@@ -74,12 +74,13 @@ app.get('/api/news', async (req, res) => {
     const connection = (req.query['connection'] as string) || null;
     const location = await getLocation(req);
     const _headers = {
+      'x-forwarded-for': req.ip,
       'user-agent': req.headers['user-agent'],
       'sec-ch-ua': req.headers['sec-ch-ua'],
       'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
       'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
       Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${req.sessionID}`,
-      'x-location': '{"country": "us", "state": "california"}', // location ? JSON.stringify(location) : '',
+      'x-location': location ? JSON.stringify(location) : '',
       'x-proxy-type': connection || '',
     };
     const headers: HeadersInit = Object.entries(_headers)
