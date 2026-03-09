@@ -1,17 +1,17 @@
-import './server/instrument.js';
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { newsSources, settings } from './server/config.js';
-import { getLocation } from './server/locationService.js';
 import * as Sentry from '@sentry/node';
-import { Logger } from './utils/logger.js';
-import { HeadlineItem } from './type.js';
-import session, { SessionData } from 'express-session';
+import cors from 'cors';
+import express from 'express';
+import session from 'express-session';
 import * as nanoid from 'nanoid';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { newsSources, settings } from './server/config.js';
+import './server/instrument.js';
+import { getLocation } from './server/locationService.js';
+import { HeadlineItem } from './type.js';
+import { Logger } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,16 +73,24 @@ app.get('/api/news', async (req, res) => {
   try {
     const connection = (req.query['connection'] as string) || null;
     const location = await getLocation(req);
+    const _headers = {
+      'user-agent': req.headers['user-agent'],
+      'sec-ch-ua': req.headers['sec-ch-ua'],
+      'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
+      'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
+      Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${req.sessionID}`,
+      'x-location': '{"country": "us", "state": "california"}', // location ? JSON.stringify(location) : '',
+      'x-proxy-type': connection || '',
+    };
+    const headers: HeadersInit = Object.entries(_headers)
+      .filter(([, v]) => v != null)
+      .map(
+        ([k, v]) => [k, Array.isArray(v) ? v.join(', ') : v] as [string, string]
+      );
 
     const mcpUrl = `${settings.GETGATHER_URL}/mcp-media/`;
     const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
-      requestInit: {
-        headers: {
-          Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${req.sessionID}`,
-          'x-location': location ? JSON.stringify(location) : '',
-          'x-proxy-type': connection || '',
-        },
-      },
+      requestInit: { headers },
     });
     Logger.info('Connecting to MCP Server', {
       mcpUrl,
