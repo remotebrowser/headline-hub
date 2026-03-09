@@ -8,6 +8,7 @@ export const settings = {
   MAXMIND_ACCOUNT_ID: process.env.MAXMIND_ACCOUNT_ID || '',
   MAXMIND_LICENSE_KEY: process.env.MAXMIND_LICENSE_KEY || '',
   SENTRY_DSN: process.env.SENTRY_DSN || '',
+  LOGFIRE_TOKEN: process.env.LOGFIRE_TOKEN || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
 };
 
