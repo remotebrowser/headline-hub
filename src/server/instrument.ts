@@ -14,7 +14,7 @@ if (settings.LOGFIRE_TOKEN) {
   logfire.configure({
     token: settings.LOGFIRE_TOKEN,
     serviceName: 'headline-hub',
-    environment: settings.NODE_ENV,
+    environment: settings.ENVIRONMENT,
     distributedTracing: true,
     otelScope: 'logfire', // Set the OpenTelemetry scope name
     scrubbing: false,
