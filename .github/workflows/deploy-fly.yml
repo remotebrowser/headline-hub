@@ -41,7 +41,9 @@ jobs:
             GETGATHER_URL="$GETGATHER_URL" \
             GETGATHER_APP_KEY="$GETGATHER_APP_KEY" \
             LOGFIRE_TOKEN="$LOGFIRE_TOKEN" \
-            TAILSCALE_AUTHKEY="$TAILSCALE_AUTHKEY"
+            TAILSCALE_AUTHKEY="$TAILSCALE_AUTHKEY" \
+            MAXMIND_ACCOUNT_ID="$MAXMIND_ACCOUNT_ID" \
+            MAXMIND_LICENSE_KEY="$MAXMIND_LICENSE_KEY"
 
       - name: Deploy ${{ matrix.app-name }} app
         run: flyctl deploy --remote-only --app ${{ matrix.app-name }}
