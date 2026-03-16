@@ -45,10 +45,10 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/sentry/config', (_, res) => {
-  console.log('Sentry config:', settings.SENTRY_DSN, settings.NODE_ENV);
+  console.log('Sentry config:', settings.SENTRY_DSN, settings.ENVIRONMENT);
   res.json({
     dsn: settings.SENTRY_DSN,
-    environment: settings.NODE_ENV,
+    environment: settings.ENVIRONMENT,
   });
 });
 

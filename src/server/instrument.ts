@@ -52,7 +52,7 @@ if (settings.SENTRY_DSN) {
       Sentry.expressIntegration(),
     ],
     tracesSampleRate: settings.NODE_ENV === 'production' ? 1 : 0.5,
-    environment: settings.NODE_ENV,
+    environment: settings.ENVIRONMENT,
     debug: false,
     beforeSend(event, hint) {
       if (settings.NODE_ENV !== 'production') {
