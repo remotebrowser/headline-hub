@@ -12,13 +12,16 @@ type LocationData = {
 
 const ipCache = new Map<string, LocationData>();
 
-const getClientIp = (request: Request): string => {
+const normalizeIp = (ip: string): string =>
+  ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+
+export const getClientIp = (request: Request): string => {
   const xff = request.headers['x-forwarded-for'];
   if (xff && typeof xff === 'string') {
-    return xff.split(',')[0].trim();
+    return normalizeIp(xff.split(',')[0].trim());
   }
 
-  return request.ip || request.connection.remoteAddress || 'unknown';
+  return normalizeIp(request.ip || request.connection.remoteAddress || 'unknown');
 };
 
 export const getLocation = async (

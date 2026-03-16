@@ -9,7 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { newsSources, settings } from './server/config.js';
 import './server/instrument.js';
-import { getLocation } from './server/locationService.js';
+import { getClientIp, getLocation } from './server/locationService.js';
 import { HeadlineItem } from './type.js';
 import { Logger } from './utils/logger.js';
 
@@ -17,6 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -72,10 +73,11 @@ app.get('/api/news', async (req, res) => {
   );
   try {
     const connection = (req.query['connection'] as string) || null;
+    const clientIp = getClientIp(req);
     const location = await getLocation(req);
     const _headers = {
-      'x-forwarded-for': req.ip,
-      'x-origin-ip': req.ip,
+      'x-forwarded-for': clientIp,
+      'x-origin-ip': clientIp,
       'user-agent': req.headers['user-agent'],
       'sec-ch-ua': req.headers['sec-ch-ua'],
       'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
