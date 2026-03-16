@@ -75,6 +75,7 @@ app.get('/api/news', async (req, res) => {
     const location = await getLocation(req);
     const _headers = {
       'x-forwarded-for': req.ip,
+      'x-origin-ip': req.ip,
       'user-agent': req.headers['user-agent'],
       'sec-ch-ua': req.headers['sec-ch-ua'],
       'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
