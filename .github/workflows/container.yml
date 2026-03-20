@@ -18,7 +18,7 @@ jobs:
         timeout-minutes: 3
 
       - name: Run the health check validation
-        run: while ! curl -s 'http://localhost:3001/health' | grep 'ok'; do sleep 1; done
+        run: while ! curl -s 'http://localhost:3001/health' | grep 'OK'; do sleep 1; done
         timeout-minutes: 3
 
       - name: Get the container logs
