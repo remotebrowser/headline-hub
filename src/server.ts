@@ -42,7 +42,9 @@ app.use(
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const timestamp = new Date().toISOString();
+  const gitRev = process.env.GIT_REV || 'unknown';
+  res.type('text').send(`OK ${timestamp} GIT_REV: ${gitRev}`);
 });
 
 app.get('/api/sentry/config', (_, res) => {
