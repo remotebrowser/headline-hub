@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import * as Sentry from '@sentry/node';
 import cors from 'cors';
+import crypto from 'crypto';
 import express from 'express';
 import session from 'express-session';
 import * as nanoid from 'nanoid';
@@ -16,12 +17,18 @@ import { Logger } from './utils/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+declare module 'express-session' {
+  interface SessionData {
+    traceId: string;
+  }
+}
+
 const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({ exposedHeaders: ['X-Session-Trace-Id'] }));
 app.use(express.json());
 app.use(
   session({
@@ -39,6 +46,15 @@ app.use(
     },
   })
 );
+
+// Session trace ID middleware - groups all requests in a session under one Logfire trace
+app.use((req, res, next) => {
+  if (!req.session.traceId) {
+    req.session.traceId = crypto.randomBytes(16).toString('hex');
+  }
+  res.setHeader('X-Session-Trace-Id', req.session.traceId);
+  next();
+});
 
 // Health check
 app.get('/health', (req, res) => {

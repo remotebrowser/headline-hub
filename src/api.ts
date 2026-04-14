@@ -9,6 +9,18 @@ type ApiResponse<T> = {
   error?: string;
 };
 
+// Module-level trace state - persists for the lifetime of the browser tab.
+// All requests in a session share the same traceId so they appear under one trace in Logfire.
+let sessionTraceId: string | null = null;
+
+function generateSpanId(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 export class ApiClient {
   private baseUrl: string;
 
@@ -21,13 +33,28 @@ export class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+
+    const traceHeaders: Record<string, string> = {};
+    if (sessionTraceId) {
+      traceHeaders['traceparent'] =
+        `00-${sessionTraceId}-${generateSpanId()}-01`;
+    }
+
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
+        ...traceHeaders,
         ...options.headers,
       },
       ...options,
     });
+
+    // Sync sessionTraceId with the server-assigned value.
+    // Also handles session expiry: if the server issues a new session, the new traceId replaces the stale one.
+    const incomingTraceId = response.headers.get('X-Session-Trace-Id');
+    if (incomingTraceId && incomingTraceId !== sessionTraceId) {
+      sessionTraceId = incomingTraceId;
+    }
 
     const result: ApiResponse<T> = await response.json();
 
