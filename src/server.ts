@@ -1,3 +1,5 @@
+import './server/instrument.js';
+
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import * as Sentry from '@sentry/node';
@@ -8,7 +10,6 @@ import * as nanoid from 'nanoid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { newsSources, settings } from './server/config.js';
-import './server/instrument.js';
 import { getClientIp, getLocation } from './server/locationService.js';
 import { HeadlineItem } from './type.js';
 import { Logger } from './utils/logger.js';
