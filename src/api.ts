@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast';
 import { HeadlineItem, NewsSourceItem } from './type.js';
-import { getTraceparentHeader } from './utils/sessionTracing.js';
+import { getSessionTraceId } from './utils/sessionTracing.js';
 
 const API_BASE_URL = '/api';
 
@@ -25,7 +25,7 @@ export class ApiClient {
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
-        traceparent: getTraceparentHeader(),
+        'x-browser-trace-id': getSessionTraceId(),
         ...options.headers,
       },
       ...options,

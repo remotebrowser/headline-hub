@@ -1,7 +1,5 @@
 import './server/instrument.js';
 
-import { trace, context, propagation } from '@opentelemetry/api';
-import * as logfire from '@pydantic/logfire-node';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import * as Sentry from '@sentry/node';
@@ -42,28 +40,6 @@ app.use(
     },
   })
 );
-
-// Extract traceparent from browser so all downstream calls (MCP, etc.)
-// inherit the browser session's trace ID.
-app.use((req, res, next) => {
-  const traceparent = req.headers['traceparent'];
-  if (!traceparent) return next();
-
-  // Activate the browser's trace context FIRST, then create a span inside it
-  // so the span inherits the browser's trace ID as its parent.
-  const extractedContext = propagation.extract(context.active(), req.headers);
-  context.with(extractedContext, () => {
-    const span = logfire.startSpan(`${req.method} ${req.path}`, {
-      'http.method': req.method,
-      'http.target': req.path,
-    });
-    const spanContext = trace.setSpan(context.active(), span);
-    context.with(spanContext, () => {
-      res.on('finish', () => span.end());
-      next();
-    });
-  });
-});
 
 // Health check
 app.get('/health', (req, res) => {

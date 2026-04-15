@@ -1,9 +1,16 @@
 import type { IncomingMessage } from 'http';
 
+import { propagation } from '@opentelemetry/api';
+import {
+  CompositePropagator,
+  W3CTraceContextPropagator,
+  W3CBaggagePropagator,
+} from '@opentelemetry/core';
 import * as logfire from '@pydantic/logfire-node';
 import * as Sentry from '@sentry/node';
 import { Logger } from '../utils/logger.js';
 import { settings } from './config.js';
+import { BrowserSessionPropagator } from './sessionPropagator.js';
 
 // Initialize Logfire first to avoid conflict with Sentry
 if (settings.LOGFIRE_TOKEN) {
@@ -24,6 +31,19 @@ if (settings.LOGFIRE_TOKEN) {
       },
     },
   });
+
+  // Register our session propagator alongside W3C defaults so that
+  // HTTP auto-instrumentation parents each request span under the
+  // long-lived session root span (instead of a phantom browser span).
+  propagation.setGlobalPropagator(
+    new CompositePropagator({
+      propagators: [
+        new BrowserSessionPropagator(),
+        new W3CTraceContextPropagator(),
+        new W3CBaggagePropagator(),
+      ],
+    })
+  );
 } else {
   console.log('⚠️  LOGFIRE_TOKEN not set - Logfire disabled');
 }

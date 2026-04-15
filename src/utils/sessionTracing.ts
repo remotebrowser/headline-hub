@@ -24,8 +24,3 @@ export function getSessionTraceId(): string {
   }
 }
 
-export function getTraceparentHeader(): string {
-  const traceId = getSessionTraceId();
-  const spanId = generateHexId(8);
-  return `00-${traceId}-${spanId}-01`;
-}
