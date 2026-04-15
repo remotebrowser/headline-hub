@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './routes';
 import * as Sentry from '@sentry/react';
+import { getSessionTraceId } from './utils/sessionTracing.js';
 import { Toaster } from 'react-hot-toast';
 
 import './styles.css';
@@ -67,6 +68,8 @@ async function initializeSentry(initRef: React.MutableRefObject<boolean>) {
       return event;
     },
   });
+
+  Sentry.setTag('browser_session_trace_id', getSessionTraceId());
 }
 
 function App() {

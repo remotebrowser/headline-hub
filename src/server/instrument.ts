@@ -1,6 +1,3 @@
-import { registerInstrumentations } from '@opentelemetry/instrumentation';
-import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import type { IncomingMessage } from 'http';
 
 import * as logfire from '@pydantic/logfire-node';
@@ -16,20 +13,16 @@ if (settings.LOGFIRE_TOKEN) {
     serviceName: 'headline-hub',
     environment: settings.ENVIRONMENT,
     distributedTracing: true,
-    otelScope: 'logfire', // Set the OpenTelemetry scope name
+    otelScope: 'logfire',
     scrubbing: false,
-  });
-
-  registerInstrumentations({
-    instrumentations: [
-      new HttpInstrumentation({
+    nodeAutoInstrumentations: {
+      '@opentelemetry/instrumentation-http': {
         ignoreIncomingRequestHook: (request: IncomingMessage) => {
           const ignoredPaths = ['/health'];
           return ignoredPaths.some((path) => request.url?.includes(path));
         },
-      }),
-      new ExpressInstrumentation(),
-    ],
+      },
+    },
   });
 } else {
   console.log('⚠️  LOGFIRE_TOKEN not set - Logfire disabled');
