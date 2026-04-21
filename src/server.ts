@@ -118,7 +118,7 @@ app.get('/api/news', async (req, res) => {
     const result = await client.callTool(
       { name: newsSource.toolName },
       undefined, // skip the progress handler
-      { timeout: 300000 } // set a custom timeout
+      { timeout: 90_000 } // set a custom timeout
     );
 
     Logger.info('Got response from MCP Server', {
