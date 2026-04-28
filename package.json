@@ -21,6 +21,7 @@
     "@headlessui/react": "^2.2.4",
     "@maxmind/geoip2-node": "^6.1.0",
     "@opentelemetry/auto-instrumentations-node": "^0.71.0",
+    "@opentelemetry/instrumentation": "^0.215.0",
     "@pydantic/logfire-node": "^0.13.0",
     "@sentry/node": "^10.15.0",
     "@sentry/react": "^10.15.0",
