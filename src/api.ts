@@ -1,10 +1,8 @@
-import { customAlphabet } from 'nanoid';
 import toast from 'react-hot-toast';
+import { getSessionHeaders, resetSession } from './sessionContext.js';
 import { HeadlineItem, NewsSourceItem } from './type.js';
 
 const API_BASE_URL = '/api';
-const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
-const SESSION_ID = customAlphabet(FRIENDLY_CHARS, 6)();
 
 type ApiResponse<T> = {
   success: boolean;
@@ -28,7 +26,7 @@ export class ApiClient {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'X-Session-Id': SESSION_ID,
+        ...getSessionHeaders(),
         ...options.headers,
       },
     });
@@ -54,6 +52,7 @@ export class ApiClient {
     source: string,
     connection: string | null
   ): Promise<HeadlineItem[]> {
+    resetSession();
     const params = new URLSearchParams({ source });
     if (connection) {
       params.append('connection', connection);

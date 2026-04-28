@@ -2,11 +2,9 @@ import './server/instrument.js';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { trace } from '@opentelemetry/api';
 import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
-import * as nanoid from 'nanoid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { newsSources, settings } from './server/config.js';
@@ -14,8 +12,11 @@ import { getClientIp, getLocation } from './server/locationService.js';
 import { HeadlineItem } from './type.js';
 import { Logger } from './utils/logger.js';
 
-const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
-const newSessionId = nanoid.customAlphabet(FRIENDLY_CHARS, 6);
+declare module 'express-serve-static-core' {
+  interface Request {
+    sessionID: string;
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,8 +29,34 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+function readSessionIdFromCookie(req: express.Request): string | undefined {
+  const cookieHeader = req.headers['cookie'];
+  if (!cookieHeader) return undefined;
+  const match = cookieHeader.match(/(?:^|; )mcp-session-id=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+function requireSession(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  const headerValue = req.headers['x-mcp-session-id'];
+  const headerSessionId = Array.isArray(headerValue)
+    ? headerValue[0]
+    : headerValue;
+  const sessionId = headerSessionId || readSessionIdFromCookie(req);
+  if (!sessionId) {
+    res.status(400).json({ error: 'mcp-session-id is required' });
+    return;
+  }
+  req.sessionID = sessionId;
+  Sentry.getIsolationScope().setTag('mcp_session_id', sessionId);
+  next();
+}
+
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   const timestamp = new Date().toISOString();
   const gitRev = process.env.GIT_REV || 'unknown';
   res.type('text').send(`OK ${timestamp} GIT_REV: ${gitRev}`);
@@ -44,9 +71,11 @@ app.get('/api/sentry/config', (_, res) => {
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.get('/test-error', (_, res) => {
+app.get('/test-error', (_req, _res) => {
   throw new Error('Test error');
 });
+
+app.use('/api', requireSession);
 
 app.get('/api/news-source', (_, res) => {
   res.json({
@@ -63,9 +92,7 @@ app.get('/api/news', async (req, res) => {
   );
   try {
     const connection = (req.query['connection'] as string) || null;
-    const sessionId =
-      (req.header('x-session-id') as string | undefined) || newSessionId();
-    trace.getActiveSpan()?.setAttribute('browser_session_id', sessionId);
+    const sessionId = req.sessionID;
     const clientIp = getClientIp(req);
     const location = await getLocation(req);
     const _headers = {
@@ -87,6 +114,7 @@ app.get('/api/news', async (req, res) => {
 
     const mcpUrl = `${settings.GETGATHER_URL}/mcp-media/`;
     const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
+      sessionId,
       requestInit: { headers },
     });
     Logger.info('Connecting to MCP Server', {
@@ -153,7 +181,7 @@ app.use(
     req: express.Request,
     res: express.Response,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    next: express.NextFunction
+    _next: express.NextFunction
   ) => {
     Logger.error('Unhandled server error', err, {
       component: 'server',
