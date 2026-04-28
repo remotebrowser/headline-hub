@@ -1,7 +1,10 @@
+import { customAlphabet } from 'nanoid';
 import toast from 'react-hot-toast';
 import { HeadlineItem, NewsSourceItem } from './type.js';
 
 const API_BASE_URL = '/api';
+const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
+const SESSION_ID = customAlphabet(FRIENDLY_CHARS, 6)();
 
 type ApiResponse<T> = {
   success: boolean;
@@ -22,11 +25,12 @@ export class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
+      ...options,
       headers: {
         'Content-Type': 'application/json',
+        'X-Session-Id': SESSION_ID,
         ...options.headers,
       },
-      ...options,
     });
 
     const result: ApiResponse<T> = await response.json();

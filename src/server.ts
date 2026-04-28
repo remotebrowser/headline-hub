@@ -1,17 +1,21 @@
+import './server/instrument.js';
+
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { trace } from '@opentelemetry/api';
 import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
-import session from 'express-session';
 import * as nanoid from 'nanoid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { newsSources, settings } from './server/config.js';
-import './server/instrument.js';
 import { getClientIp, getLocation } from './server/locationService.js';
 import { HeadlineItem } from './type.js';
 import { Logger } from './utils/logger.js';
+
+const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
+const newSessionId = nanoid.customAlphabet(FRIENDLY_CHARS, 6);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,22 +27,6 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(
-  session({
-    genid: function () {
-      const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
-      return nanoid.customAlphabet(FRIENDLY_CHARS, 6)();
-    },
-    secret: '1234567890',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: settings.NODE_ENV === 'production',
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  })
-);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -75,6 +63,9 @@ app.get('/api/news', async (req, res) => {
   );
   try {
     const connection = (req.query['connection'] as string) || null;
+    const sessionId =
+      (req.header('x-session-id') as string | undefined) || newSessionId();
+    trace.getActiveSpan()?.setAttribute('browser_session_id', sessionId);
     const clientIp = getClientIp(req);
     const location = await getLocation(req);
     const _headers = {
@@ -84,7 +75,7 @@ app.get('/api/news', async (req, res) => {
       'sec-ch-ua': req.headers['sec-ch-ua'],
       'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
       'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
-      Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${req.sessionID}`,
+      Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${sessionId}`,
       'x-location': location ? JSON.stringify(location) : undefined,
       'x-proxy-type': connection || '',
     };
