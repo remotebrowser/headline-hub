@@ -1,6 +1,5 @@
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
-import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import type { IncomingMessage } from 'http';
 
 import * as logfire from '@pydantic/logfire-node';
@@ -8,7 +7,6 @@ import * as Sentry from '@sentry/node';
 import { Logger } from '../utils/logger.js';
 import { settings } from './config.js';
 
-// Initialize Logfire first to avoid conflict with Sentry
 if (settings.LOGFIRE_TOKEN) {
   Logger.info('Initializing Logfire');
   logfire.configure({
@@ -16,19 +14,23 @@ if (settings.LOGFIRE_TOKEN) {
     serviceName: 'headline-hub',
     environment: settings.ENVIRONMENT,
     distributedTracing: true,
-    otelScope: 'logfire', // Set the OpenTelemetry scope name
+    otelScope: 'logfire',
     scrubbing: false,
   });
 
   registerInstrumentations({
     instrumentations: [
-      new HttpInstrumentation({
-        ignoreIncomingRequestHook: (request: IncomingMessage) => {
-          const ignoredPaths = ['/health'];
-          return ignoredPaths.some((path) => request.url?.includes(path));
+      getNodeAutoInstrumentations({
+        '@opentelemetry/instrumentation-http': {
+          ignoreIncomingRequestHook: (request: IncomingMessage) => {
+            const ignoredPaths = ['/health', '/api/sentry/config'];
+            return ignoredPaths.some((path) => request.url?.includes(path));
+          },
         },
+        '@opentelemetry/instrumentation-fs': { enabled: false },
+        '@opentelemetry/instrumentation-net': { enabled: false },
+        '@opentelemetry/instrumentation-dns': { enabled: false },
       }),
-      new ExpressInstrumentation(),
     ],
   });
 } else {
