@@ -21,9 +21,7 @@ export const getClientIp = (request: Request): string => {
     return normalizeIp(xff.split(',')[0].trim());
   }
 
-  return normalizeIp(
-    request.ip || request.connection.remoteAddress || 'unknown'
-  );
+  return normalizeIp(request.ip || request.connection.remoteAddress || 'unknown');
 };
 
 export const getLocation = async (
