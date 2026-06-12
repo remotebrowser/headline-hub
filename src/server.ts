@@ -1,12 +1,18 @@
 import './server/instrument.js';
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  createRemoteBrowser,
+  destroyRemoteBrowser,
+  distillPage,
+  generateId,
+  getPage,
+  navigatePage,
+} from './server/remoteBrowser.js';
 import { newsSources, settings } from './server/config.js';
 import { getClientIp, getLocation } from './server/locationService.js';
 import { HeadlineItem } from './type.js';
@@ -86,43 +92,12 @@ app.get('/api/news-source', (_, res) => {
 
 // API Routes
 app.get('/api/news', async (req, res) => {
-  const client = new Client(
-    { name: 'headline-hub-server', version: '1.0.0' },
-    { capabilities: {} }
-  );
+  let browserId: string | undefined;
   try {
     const connection = (req.query['connection'] as string) || null;
     const sessionId = req.sessionID;
     const clientIp = getClientIp(req);
     const location = await getLocation(req);
-    const _headers = {
-      'x-forwarded-for': clientIp,
-      'x-origin-ip': clientIp,
-      'user-agent': req.headers['user-agent'],
-      'sec-ch-ua': req.headers['sec-ch-ua'],
-      'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
-      'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
-      Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${sessionId}`,
-      'x-location': location ? JSON.stringify(location) : undefined,
-      'x-proxy-type': connection || '',
-    };
-    const headers: HeadersInit = Object.entries(_headers)
-      .filter(([, v]) => v != null)
-      .map(
-        ([k, v]) => [k, Array.isArray(v) ? v.join(', ') : v] as [string, string]
-      );
-
-    const mcpUrl = `${settings.GETGATHER_URL}/mcp-media/`;
-    const transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
-      sessionId,
-      requestInit: { headers },
-    });
-    Logger.info('Connecting to MCP Server', {
-      mcpUrl,
-      location,
-    });
-    await client.connect(transport);
-    Logger.info('Connected to MCP Server');
     const source = (req.query.source as string) || 'npr';
     const newsSource = newsSources.find((s) => s.id === source);
 
@@ -130,36 +105,51 @@ app.get('/api/news', async (req, res) => {
       throw new Error(`News source not found for source: ${source}`);
     }
 
-    if (!newsSource.toolName) {
-      throw new Error(`Tool name not found for source: ${source}`);
+    const _headers: Record<string, string | string[] | undefined> = {
+      Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${sessionId}`,
+      'x-forwarded-for': clientIp,
+      'x-origin-ip': clientIp,
+      'user-agent': req.headers['user-agent'],
+      'sec-ch-ua': req.headers['sec-ch-ua'],
+      'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
+      'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
+      'x-location': location ? JSON.stringify(location) : '',
+      'x-proxy-type': connection || '',
+    };
+    const headers: Record<string, string> = {};
+    for (const [k, v] of Object.entries(_headers)) {
+      if (v != null) {
+        headers[k] = Array.isArray(v) ? v.join(', ') : v;
+      }
     }
 
-    const result = await client.callTool(
-      { name: newsSource.toolName },
-      undefined, // skip the progress handler
-      { timeout: 300000 } // set a custom timeout
-    );
+    browserId = generateId();
+    Logger.info('Creating remote browser', { browserId, source });
+    await createRemoteBrowser(browserId, headers);
 
-    Logger.info('Got response from MCP Server', {
-      content: `${JSON.stringify(result).slice(0, 250)}...`,
+    const page = await getPage(browserId, headers);
+    Logger.info('Navigating to', { url: newsSource.url });
+    await navigatePage(page, newsSource.url, headers);
+
+    const rawDistilled = await distillPage(page, headers);
+    Logger.info('Got distilled content', {
+      source,
+      itemCount: Array.isArray(rawDistilled) ? rawDistilled.length : 0,
     });
 
-    if (result.isError) {
-      res.status(500).json({
-        success: false,
-        error: JSON.stringify(result.content),
-      });
-      return;
-    }
-
-    const structuredContent = result.structuredContent as Record<
-      string,
-      HeadlineItem[]
-    >;
+    const data: HeadlineItem[] = Array.isArray(rawDistilled)
+      ? rawDistilled.map((item: Record<string, unknown>): HeadlineItem => {
+          const url = (item.url ?? item.href ?? item.link ?? '') as string;
+          return {
+            title: (item.title ?? item.text ?? item.name ?? '') as string,
+            url: url.startsWith('/') ? new URL(url, newsSource.url).href : url,
+          };
+        })
+      : [];
 
     res.json({
       success: true,
-      data: structuredContent?.[newsSource.dataKey],
+      data,
     });
   } catch (error) {
     Logger.error('Get News Error:', error as Error);
@@ -168,8 +158,14 @@ app.get('/api/news', async (req, res) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   } finally {
-    Logger.info('Disconnecting from MCP Server');
-    await client.close();
+    if (browserId) {
+      try {
+        await destroyRemoteBrowser(browserId);
+        Logger.info('Browser destroyed', { browserId });
+      } catch (e) {
+        Logger.error('Error destroying browser:', e as Error);
+      }
+    }
   }
 });
 
