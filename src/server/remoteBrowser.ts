@@ -22,7 +22,7 @@ export async function createRemoteBrowser(
   id: string,
   headers?: Record<string, string>
 ): Promise<void> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${id}`;
+  const url = `${settings.GETGATHER_URL}/api/v1/browsers/${id}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
@@ -35,7 +35,7 @@ export async function createRemoteBrowser(
 }
 
 export async function destroyRemoteBrowser(browserId: string): Promise<void> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${browserId}`;
+  const url = `${settings.GETGATHER_URL}/api/v1/browsers/${browserId}`;
   await fetch(url, { method: 'DELETE' });
 }
 
@@ -47,7 +47,7 @@ export async function getPage(
   browserId: string,
   headers?: Record<string, string>
 ): Promise<BrowserPage> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${browserId}/pages`;
+  const url = `${settings.GETGATHER_URL}/api/v1/browsers/${browserId}/pages`;
   for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
     const response = await fetch(url, { method: 'GET', headers: headers || {} });
     if (response.ok) {
@@ -67,7 +67,7 @@ export async function navigatePage(
   headers?: Record<string, string>
 ): Promise<void> {
   const navigateUrl =
-    `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${page.browserId}` +
+    `${settings.GETGATHER_URL}/api/v1/browsers/${page.browserId}` +
     `/pages/${page.pageId}/navigate?url=${encodeURIComponent(url)}`;
   for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
     const response = await fetch(navigateUrl, {
@@ -86,7 +86,7 @@ export async function distillPage(
   page: BrowserPage,
   headers?: Record<string, string>
 ): Promise<unknown> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${page.browserId}/pages/${page.pageId}/distilled`;
+  const url = `${settings.GETGATHER_URL}/api/v1/browsers/${page.browserId}/pages/${page.pageId}/distilled`;
   for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
     const response = await fetch(url, { method: 'GET', headers: headers || {} });
     if (response.ok) {
