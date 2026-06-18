@@ -14,7 +14,6 @@ import {
   navigatePage,
 } from './server/remoteBrowser.js';
 import { newsSources, settings } from './server/config.js';
-import { getClientIp, getLocation } from './server/locationService.js';
 import { HeadlineItem } from './type.js';
 import { Logger } from './utils/logger.js';
 
@@ -94,10 +93,13 @@ app.get('/api/news-source', (_, res) => {
 app.get('/api/news', async (req, res) => {
   let browserId: string | undefined;
   try {
-    const connection = (req.query['connection'] as string) || null;
     const sessionId = req.sessionID;
-    const clientIp = getClientIp(req);
-    const location = await getLocation(req);
+    const xff = req.headers['x-forwarded-for'];
+    const rawIp =
+      xff && typeof xff === 'string'
+        ? xff.split(',')[0].trim()
+        : req.ip || req.connection.remoteAddress || 'unknown';
+    const clientIp = rawIp.startsWith('::ffff:') ? rawIp.slice(7) : rawIp;
     const source = (req.query.source as string) || 'npr';
     const newsSource = newsSources.find((s) => s.id === source);
 
@@ -107,14 +109,11 @@ app.get('/api/news', async (req, res) => {
 
     const _headers: Record<string, string | string[] | undefined> = {
       Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${sessionId}`,
-      'x-forwarded-for': clientIp,
       'x-origin-ip': clientIp,
       'user-agent': req.headers['user-agent'],
       'sec-ch-ua': req.headers['sec-ch-ua'],
       'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
       'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
-      'x-location': location ? JSON.stringify(location) : '',
-      'x-proxy-type': connection || '',
     };
     const headers: Record<string, string> = {};
     for (const [k, v] of Object.entries(_headers)) {
