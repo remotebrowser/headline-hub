@@ -211,7 +211,6 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Initialize MCP client and start server
 async function startServer() {
   try {
     app.listen(PORT, () => {
@@ -223,7 +222,7 @@ async function startServer() {
       }
     });
   } catch (error) {
-    console.error('Failed to initialize MCP client:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
