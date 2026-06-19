@@ -12,6 +12,7 @@ import {
   generateId,
   getPage,
   navigatePage,
+  uploadPatterns,
 } from './server/remoteBrowser.js';
 import { newsSources, settings } from './server/config.js';
 import { HeadlineItem } from './type.js';
@@ -121,6 +122,8 @@ app.get('/api/news', async (req, res) => {
         headers[k] = Array.isArray(v) ? v.join(', ') : v;
       }
     }
+
+    await uploadPatterns();
 
     browserId = generateId();
     Logger.info('Creating remote browser', { browserId, source });
