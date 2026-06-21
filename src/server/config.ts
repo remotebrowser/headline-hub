@@ -4,7 +4,7 @@ dotenv.config();
 
 export const settings = {
   REMOTEBROWSER_URL: process.env.REMOTEBROWSER_URL || 'http://127.0.0.1:23456',
-  GETGATHER_APP_KEY: process.env.GETGATHER_APP_KEY || '',
+  REMOTEBROWSER_APP_KEY: process.env.REMOTEBROWSER_APP_KEY || '',
 
   SENTRY_DSN: process.env.SENTRY_DSN || '',
   LOGFIRE_TOKEN: process.env.LOGFIRE_TOKEN || '',

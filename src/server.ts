@@ -108,7 +108,7 @@ app.get('/api/news', async (req, res) => {
     }
 
     const _headers: Record<string, string | string[] | undefined> = {
-      Authorization: `Bearer ${settings.GETGATHER_APP_KEY}_${sessionId}`,
+      Authorization: `Bearer ${settings.REMOTEBROWSER_APP_KEY}_${sessionId}`,
       'x-origin-ip': clientIp,
       'user-agent': req.headers['user-agent'],
       'sec-ch-ua': req.headers['sec-ch-ua'],
