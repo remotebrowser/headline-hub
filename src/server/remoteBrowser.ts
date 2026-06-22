@@ -122,7 +122,7 @@ export async function uploadPatterns(): Promise<void> {
     const name = path.basename(file, `.${ext}`);
     const content = readFileSync(path.join(PATTERNS_DIR, file), 'utf8');
     const url =
-      `${settings.GETGATHER_URL}/api/v1/patterns/` +
+      `${settings.REMOTEBROWSER_URL}/api/v1/patterns/` +
       `${encodeURIComponent(name)}?ext=${ext}`;
     const startedAt = Date.now();
     const response = await fetch(url, {
