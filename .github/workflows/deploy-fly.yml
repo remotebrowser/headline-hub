@@ -16,6 +16,11 @@ on:
         required: false
         type: boolean
         default: true
+      daytona:
+        description: Deploy headline-hub-daytona
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   prepare-matrix:
@@ -27,11 +32,13 @@ jobs:
         uses: remotebrowser/shared-github-actions/prepare-matrix@v1
         with:
           entries: |
-            { "env": "demo",   "config": "demo",   "app_name": "headline-hub",        "fly_toml": "fly.toml"        }
-            { "env": "lambda", "config": "lambda", "app_name": "headline-hub-lambda", "fly_toml": "fly.lambda.toml" }
+            { "env": "demo",    "config": "demo",    "app_name": "headline-hub",         "fly_toml": "fly.toml"        }
+            { "env": "lambda",  "config": "lambda",  "app_name": "headline-hub-lambda",  "fly_toml": "fly.lambda.toml" }
+            { "env": "daytona", "config": "daytona", "app_name": "headline-hub-daytona", "fly_toml": "fly.toml" }
           selections: |
-            ${{ inputs.demo   && 'demo'   || '' }}
-            ${{ inputs.lambda && 'lambda' || '' }}
+            ${{ inputs.demo    && 'demo'    || '' }}
+            ${{ inputs.lambda  && 'lambda'  || '' }}
+            ${{ inputs.daytona && 'daytona' || '' }}
           key-field: env
 
   deploy:
