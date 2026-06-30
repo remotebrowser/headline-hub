@@ -20,6 +20,6 @@ REMOTEBROWSER_URL=http://localhost:23456
 ## Development
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 npm run dev
 ```
