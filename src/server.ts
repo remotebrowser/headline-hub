@@ -3,6 +3,7 @@ import './server/instrument.js';
 import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
+import { trace } from '@opentelemetry/api';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
@@ -103,6 +104,12 @@ app.get('/api/news', async (req, res) => {
     const clientIp = rawIp.startsWith('::ffff:') ? rawIp.slice(7) : rawIp;
     const source = (req.query.source as string) || 'npr';
     const newsSource = newsSources.find((s) => s.id === source);
+
+    const span = trace.getActiveSpan();
+    if (newsSource) {
+      span?.setAttribute('news.source.url', newsSource.url);
+      span?.updateName(`GET /api/news (${newsSource.label})`);
+    }
 
     if (!newsSource) {
       throw new Error(`News source not found for source: ${source}`);
