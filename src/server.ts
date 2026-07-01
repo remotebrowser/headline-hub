@@ -10,7 +10,6 @@ import {
   createRemoteBrowser,
   destroyRemoteBrowser,
   distillPage,
-  generateId,
   getPage,
   navigatePage,
   uploadPatterns,
@@ -132,12 +131,11 @@ app.get('/api/news', async (req, res) => {
 
     await uploadPatterns();
 
-    browserId = generateId();
-    Logger.info('Creating remote browser', { browserId, source });
-    await createRemoteBrowser(browserId, headers);
+    Logger.info('Creating remote browser', { source });
+    browserId = await createRemoteBrowser(headers);
 
     const page = await getPage(browserId, headers);
-    Logger.info('Navigating to', { url: newsSource.url });
+    Logger.info('Navigating to', { browserId, url: newsSource.url });
     await navigatePage(page, newsSource.url, headers);
 
     const rawDistilled = await distillPage(page, headers);
