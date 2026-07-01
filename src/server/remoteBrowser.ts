@@ -1,12 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { customAlphabet } from 'nanoid';
 import { settings } from './config.js';
 import { Logger } from '../utils/logger.js';
-
-const FRIENDLY_CHARS = '23456789abcdefghijkmnpqrstuvwxyz';
-export const generateId = customAlphabet(FRIENDLY_CHARS, 7);
 
 const REMOTE_BROWSER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PATTERNS_DIR = path.join(REMOTE_BROWSER_DIR, 'patterns');
@@ -26,10 +22,9 @@ export interface BrowserPage {
 }
 
 export async function createRemoteBrowser(
-  id: string,
   headers?: Record<string, string>
-): Promise<void> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${id}`;
+): Promise<string> {
+  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
@@ -39,6 +34,8 @@ export async function createRemoteBrowser(
       `Failed to create remote browser: ${response.status} ${response.statusText}`
     );
   }
+  const { browser_id } = (await response.json()) as { browser_id: string };
+  return browser_id;
 }
 
 export async function destroyRemoteBrowser(browserId: string): Promise<void> {
