@@ -1,5 +1,6 @@
 import * as logfire from '@pydantic/logfire-node';
 import * as Sentry from '@sentry/node';
+import { ExpressLayerType } from '@opentelemetry/instrumentation-express';
 import { Logger } from '../utils/logger.js';
 import { settings } from './config.js';
 
@@ -20,7 +21,7 @@ if (settings.LOGFIRE_TOKEN) {
         enabled: false,
       },
       '@opentelemetry/instrumentation-express': {
-        ignoreLayersType: ['middleware'],
+        ignoreLayersType: [ExpressLayerType.MIDDLEWARE],
       },
     },
   });
