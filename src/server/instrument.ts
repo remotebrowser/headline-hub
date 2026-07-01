@@ -12,6 +12,17 @@ if (settings.LOGFIRE_TOKEN) {
     distributedTracing: true,
     otelScope: 'logfire',
     scrubbing: false,
+    nodeAutoInstrumentations: {
+      '@opentelemetry/instrumentation-http': {
+        ignoreIncomingRequestHook: (request) => request.url === '/health',
+      },
+      '@opentelemetry/instrumentation-net': {
+        enabled: false,
+      },
+      '@opentelemetry/instrumentation-express': {
+        ignoreLayersType: ['middleware'],
+      },
+    },
   });
 } else {
   console.log('⚠️  LOGFIRE_TOKEN not set - Logfire disabled');
