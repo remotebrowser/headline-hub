@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { settings } from './config.js';
-import { Logger } from '../utils/logger.js';
+import { consola } from 'consola';
 
 const REMOTE_BROWSER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PATTERNS_DIR = path.join(REMOTE_BROWSER_DIR, 'patterns');
@@ -130,7 +130,7 @@ export async function uploadPatterns(): Promise<void> {
     const elapsedMs = Date.now() - startedAt;
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
-      Logger.error(
+      consola.error(
         `Failed to upload pattern ${file}`,
         new Error(`${response.status} ${response.statusText} ${errorText}`),
         {
@@ -147,6 +147,6 @@ export async function uploadPatterns(): Promise<void> {
       status?: string;
     };
     const { status } = result;
-    Logger.info(`Uploaded pattern ${file}`, { file, elapsedMs, status });
+    consola.success(`Uploaded pattern ${file}`, { file, elapsedMs, status });
   }
 }

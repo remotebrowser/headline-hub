@@ -16,7 +16,7 @@ import {
 } from './server/remoteBrowser.js';
 import { newsSources, settings } from './server/config.js';
 import { HeadlineItem } from './type.js';
-import { Logger } from './utils/logger.js';
+import { consola } from 'consola';
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -131,15 +131,15 @@ app.get('/api/news', async (req, res) => {
 
     await uploadPatterns();
 
-    Logger.info('Creating remote browser', { source });
+    consola.start('Creating remote browser', { source });
     browserId = await createRemoteBrowser(headers);
 
     const page = await getPage(browserId, headers);
-    Logger.info('Navigating to', { browserId, url: newsSource.url });
+    consola.start('Navigating to', { browserId, url: newsSource.url });
     await navigatePage(page, newsSource.url, headers);
 
     const rawDistilled = await distillPage(page, headers);
-    Logger.info('Got distilled content', {
+    consola.success('Got distilled content', {
       source,
       itemCount: Array.isArray(rawDistilled) ? rawDistilled.length : 0,
     });
@@ -159,7 +159,7 @@ app.get('/api/news', async (req, res) => {
       data,
     });
   } catch (error) {
-    Logger.error('Get News Error:', error as Error);
+    consola.error('Get News Error:', error as Error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -168,9 +168,9 @@ app.get('/api/news', async (req, res) => {
     if (browserId) {
       try {
         await destroyRemoteBrowser(browserId);
-        Logger.info('Browser destroyed', { browserId });
+        consola.info('Browser destroyed', { browserId });
       } catch (e) {
-        Logger.error('Error destroying browser:', e as Error);
+        consola.error('Error destroying browser:', e as Error);
       }
     }
   }
@@ -186,7 +186,7 @@ app.use(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _next: express.NextFunction
   ) => {
-    Logger.error('Unhandled server error', err, {
+    consola.error('Unhandled server error', err, {
       component: 'server',
       operation: 'fallback-error-handler',
       url: req.url,
