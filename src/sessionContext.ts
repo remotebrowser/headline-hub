@@ -1,19 +1,17 @@
-const COOKIE_NAME = 'mcp-session-id';
-
 export function getSessionId(): string | null {
-  const match = document.cookie.match(/(?:^|; )mcp-session-id=([^;]+)/);
+  const match = document.cookie.match(/(?:^|; )session-id=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
 export function resetSession(): string {
   const id = crypto.randomUUID();
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(id)}; path=/; SameSite=Lax`;
+  document.cookie = `session-id=${encodeURIComponent(id)}; path=/; SameSite=Lax`;
   return id;
 }
 
 export function getSessionHeaders(): Record<string, string> {
   const id = getSessionId();
-  return id ? { 'x-mcp-session-id': id } : {};
+  return id ? { 'x-session-id': id } : {};
 }
 
 resetSession();
