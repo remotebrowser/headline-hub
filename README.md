@@ -6,8 +6,8 @@ Headline Hub is a web app that collects the latest headline news from different 
 
 ## Technical Overview
 
-- **Frontend:** React (Vite), TypeScript, Tailwind CSS.
-- **Backend:** Express.js.
+- **Frontend:** Vanilla JavaScript (Vite), Tailwind CSS.
+- **Backend:** Express.js, TypeScript.
 
 ## Configuration
 
