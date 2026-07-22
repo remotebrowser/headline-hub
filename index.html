@@ -5,9 +5,91 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Headline Hub</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script
+      src="https://browser.sentry-cdn.com/10.15.0/bundle.tracing.replay.min.js"
+      integrity="sha384-YQtrqnHloP8hgSTeUPT8IhMNSNylXYMBsdeO2uhR10+WDxy9A3Z12OiNIXxc1mTr"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="min-h-screen">
+      <header
+        class="sticky top-0 z-50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200"
+      >
+        <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center h-16">
+            <div class="flex items-center">
+              <span
+                class="text-xl font-bold text-neutral-700"
+                style="text-decoration: underline"
+              >
+                HEADLINE HUB
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <div class="flex-1 w-full py-12 px-4 sm:px-6 lg:px-8">
+          <div class="max-w-5xl mx-auto">
+            <div
+              class="flex items-center justify-between gap-8 p-6 rounded-2xl bg-white shadow-sm border border-gray-100"
+            >
+              <div class="flex items-center gap-8">
+                <div class="flex items-center gap-4">
+                  <div class="p-3 bg-gray-100 rounded-xl">
+                    <span aria-hidden class="text-3xl">📰</span>
+                  </div>
+                  <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                    <span
+                      class="bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-clip-text text-transparent"
+                    >
+                      Get News
+                    </span>
+                  </h2>
+                </div>
+                <p class="text-gray-600 text-lg">
+                  Tap to pull the latest headlines.
+                </p>
+              </div>
+              <div class="flex items-center gap-2" id="source-buttons">
+                <button
+                  type="button"
+                  data-source="npr"
+                  class="min-w-24 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-white bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  NPR
+                </button>
+                <button
+                  type="button"
+                  data-source="groundnews"
+                  class="min-w-24 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-white bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Ground News
+                </button>
+                <button
+                  type="button"
+                  data-source="cnn"
+                  class="min-w-24 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-white bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  CNN
+                </button>
+              </div>
+            </div>
+
+            <div id="loading" class="flex items-center justify-center mt-10 hidden">
+              <div class="spinner"></div>
+            </div>
+
+            <div id="headlines" class="mt-10 hidden">
+              <ul class="space-y-3 text-left" id="headlines-list"></ul>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="/main.js"></script>
   </body>
 </html>

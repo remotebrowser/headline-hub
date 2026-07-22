@@ -208,13 +208,13 @@ if (process.env.NODE_ENV === 'production') {
   // Serve static files from dist directory (after API routes)
   app.use(express.static(path.join(__dirname, '..', 'dist')));
 
-  // Catch-all handler: send back React app for any non-API, non-static routes
+  // Catch-all handler: send back the app shell for any non-API, non-static routes
   app.use((req, res, next) => {
     // If it's an API route, let other handlers deal with it
     if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
       return next();
     }
-    // For all other routes, serve the React app
+    // For all other routes, serve the app shell
     res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
   });
 }
