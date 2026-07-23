@@ -15,8 +15,12 @@ import {
   uploadPatterns,
 } from './server/remoteBrowser.js';
 import { newsSources, settings } from './server/config.js';
-import { HeadlineItem } from './type.js';
 import { consola } from 'consola';
+
+type HeadlineItem = {
+  title: string;
+  url: string;
+};
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -24,8 +28,7 @@ declare module 'express-serve-static-core' {
   }
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.set('trust proxy', true);
@@ -219,7 +222,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-async function startServer() {
+function startServer() {
   try {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

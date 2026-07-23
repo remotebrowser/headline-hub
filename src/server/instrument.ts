@@ -70,15 +70,6 @@ if (settings.SENTRY_DSN) {
 
       const scope = Sentry.getIsolationScope();
       const tags = scope.getScopeData().tags;
-      if (tags?.browser_session_id) {
-        event.tags = {
-          ...event.tags,
-          browser_session_id: tags.browser_session_id as string,
-        };
-      }
-      if (tags?.signin_id) {
-        event.tags = { ...event.tags, signin_id: tags.signin_id as string };
-      }
       if (tags?.mcp_session_id) {
         event.tags = {
           ...event.tags,
@@ -97,15 +88,6 @@ if (settings.SENTRY_DSN) {
       // Add centralized IDs from context if available
       const scope = Sentry.getIsolationScope();
       const tags = scope.getScopeData().tags;
-      if (tags?.browser_session_id) {
-        event.tags = {
-          ...event.tags,
-          browser_session_id: tags.browser_session_id as string,
-        };
-      }
-      if (tags?.signin_id) {
-        event.tags = { ...event.tags, signin_id: tags.signin_id as string };
-      }
       if (tags?.mcp_session_id) {
         event.tags = {
           ...event.tags,
@@ -135,7 +117,6 @@ if (settings.SENTRY_DSN) {
           tags: {
             component: context?.component as string | undefined,
             operation: context?.operation as string | undefined,
-            brand_id: context?.brandId as string | undefined,
           },
           extra: {
             ...context,
