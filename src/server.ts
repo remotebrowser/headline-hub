@@ -6,14 +6,15 @@ import express from 'express';
 import { trace } from '@opentelemetry/api';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readdirSync, statSync, readFileSync } from 'node:fs';
 import {
   createRemoteBrowser,
   destroyRemoteBrowser,
-  distillPage,
-  getPage,
-  navigatePage,
-  uploadPatterns,
 } from './server/remoteBrowser.js';
+import { chromium } from 'playwright';
+import type { Browser, Page } from 'playwright';
+import { convert, distill, parse, patternsDir } from './server/distill.js';
+import type { PatternEntry } from './server/distill.js';
 import { newsSources, settings } from './server/config.js';
 import { consola } from 'consola';
 
@@ -29,6 +30,60 @@ declare module 'express-serve-static-core' {
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const patterns: PatternEntry[] = readdirSync(patternsDir)
+  .map((file) => path.join(patternsDir, file))
+  .filter((name) => {
+    const st = statSync(name);
+    return st && !st.isDirectory();
+  })
+  .filter((name) => name.endsWith('.html'))
+  .map((name) => {
+    const content = readFileSync(name, 'utf-8');
+    const pattern = parse(content);
+    return { name, pattern };
+  });
+
+const NAV_RETRY_ATTEMPTS = 30;
+const NAV_RETRY_INTERVAL_MS = 1000;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+const navigatePage = async (page: Page, url: string): Promise<void> => {
+  for (let attempt = 0; attempt < NAV_RETRY_ATTEMPTS; attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      return;
+    } catch (err) {
+      consola.warn('Navigation attempt failed, retrying...', {
+        attempt,
+        err: (err as Error).message,
+      });
+    }
+    await sleep(NAV_RETRY_INTERVAL_MS);
+  }
+  throw new Error(`Failed to navigate to ${url}`);
+};
+
+const getCdpUrl = (browserId: string): string => {
+  const baseUrl = settings.REMOTEBROWSER_URL.replace(/\/+$/, '');
+  const protocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
+  return (
+    baseUrl.replace(/^https?:\/\//, `${protocol}://`) +
+    `/api/v1/browsers/${browserId}/cdp`
+  );
+};
+
+const getBrowser = async (browserId: string): Promise<Browser> => {
+  return await chromium.connectOverCDP(getCdpUrl(browserId));
+};
+
+const getPage = async (browser: Browser): Promise<Page> => {
+  const [context] = browser.contexts();
+  const pages = context.pages();
+  return pages.length > 0 ? pages[0] : await context.newPage();
+};
 
 const app = express();
 app.set('trust proxy', true);
@@ -54,11 +109,17 @@ function requireSession(
   const headerSessionId = Array.isArray(headerValue)
     ? headerValue[0]
     : headerValue;
-  const sessionId = headerSessionId || readSessionIdFromCookie(req);
+  let sessionId = headerSessionId || readSessionIdFromCookie(req);
+
+  // Auto-generate a session ID if none was provided
   if (!sessionId) {
-    res.status(400).json({ error: 'session-id is required' });
-    return;
+    sessionId = crypto.randomUUID();
+    res.cookie('session-id', encodeURIComponent(sessionId), {
+      path: '/',
+      sameSite: 'lax',
+    });
   }
+
   req.sessionID = sessionId;
   Sentry.getIsolationScope().setTag('mcp_session_id', sessionId);
   next();
@@ -96,6 +157,8 @@ app.get('/api/news-source', (_, res) => {
 // API Routes
 app.get('/api/news', async (req, res) => {
   let browserId: string | undefined;
+  let page: Page | undefined;
+  let browser: Browser | undefined;
   try {
     const sessionId = req.sessionID;
     const xff = req.headers['x-forwarded-for'];
@@ -132,30 +195,39 @@ app.get('/api/news', async (req, res) => {
       }
     }
 
-    await uploadPatterns();
+    const hostname = new URL(newsSource.url).hostname;
 
     consola.start('Creating remote browser', { source });
     browserId = await createRemoteBrowser(headers);
 
-    const page = await getPage(browserId, headers);
+    browser = await getBrowser(browserId);
+    page = await getPage(browser);
     consola.start('Navigating to', { browserId, url: newsSource.url });
-    await navigatePage(page, newsSource.url, headers);
+    await navigatePage(page, newsSource.url);
 
-    const rawDistilled = await distillPage(page, headers);
-    consola.success('Got distilled content', {
+    const match = await distill(hostname, patterns, page);
+    if (!match) {
+      throw new Error('No matching pattern found for the page');
+    }
+    consola.success('Got distilled pattern', {
       source,
-      itemCount: Array.isArray(rawDistilled) ? rawDistilled.length : 0,
+      name: match.name,
+      priority: match.priority,
     });
 
-    const data: HeadlineItem[] = Array.isArray(rawDistilled)
-      ? rawDistilled.map((item: Record<string, unknown>): HeadlineItem => {
-          const url = (item.url ?? item.href ?? item.link ?? '') as string;
-          return {
-            title: (item.title ?? item.text ?? item.name ?? '') as string,
-            url: url.startsWith('/') ? new URL(url, newsSource.url).href : url,
-          };
-        })
-      : [];
+    const converted = await convert(match.distilled, patternsDir);
+    const itemCount = converted.length;
+    consola.success('Converted content', { source, itemCount });
+
+    const data: HeadlineItem[] = converted.map(
+      (item: Record<string, string>): HeadlineItem => {
+        const url = (item.url ?? item.href ?? item.link ?? '') as string;
+        return {
+          title: (item.title ?? item.text ?? item.name ?? '') as string,
+          url: url.startsWith('/') ? new URL(url, newsSource.url).href : url,
+        };
+      }
+    );
 
     res.json({
       success: true,
@@ -168,6 +240,14 @@ app.get('/api/news', async (req, res) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   } finally {
+    if (browser) {
+      try {
+        await browser.close();
+        consola.info('Playwright browser disconnected', { browserId });
+      } catch (e) {
+        consola.error('Error closing Playwright browser:', e as Error);
+      }
+    }
     if (browserId) {
       try {
         await destroyRemoteBrowser(browserId);
