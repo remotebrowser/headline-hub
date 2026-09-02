@@ -271,6 +271,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/static-assets/*', serveStatic({ root: distDir }));
   app.use('/favicon.svg', serveStatic({ root: distDir }));
   app.use('/favicon.ico', serveStatic({ root: distDir }));
+  app.use('/main.js', serveStatic({ root: distDir }));
 
   // SPA fallback: serve index.html for any non-API, non-static route
   app.get('*', (c) => {
