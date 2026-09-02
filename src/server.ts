@@ -1,8 +1,12 @@
 import './server/instrument.js';
 
 import * as Sentry from '@sentry/node';
-import cors from 'cors';
-import express from 'express';
+import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
+import { cors } from 'hono/cors';
+import { getCookie, setCookie } from 'hono/cookie';
+import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { trace } from '@opentelemetry/api';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,11 +27,9 @@ type HeadlineItem = {
   url: string;
 };
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    sessionID: string;
-  }
-}
+type Variables = {
+  sessionID: string;
+};
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -85,89 +87,72 @@ const getPage = async (browser: Browser): Promise<Page> => {
   return pages.length > 0 ? pages[0] : await context.newPage();
 };
 
-const app = express();
-app.set('trust proxy', true);
+const app = new Hono<{ Variables: Variables }>();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
 
-function readSessionIdFromCookie(req: express.Request): string | undefined {
-  const cookieHeader = req.headers['cookie'];
-  if (!cookieHeader) return undefined;
-  const match = cookieHeader.match(/(?:^|; )session-id=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : undefined;
-}
-
-function requireSession(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): void {
-  const headerValue = req.headers['x-session-id'];
-  const headerSessionId = Array.isArray(headerValue)
-    ? headerValue[0]
-    : headerValue;
-  let sessionId = headerSessionId || readSessionIdFromCookie(req);
+// Session middleware
+app.use('/api/*', async (c: Context<{ Variables: Variables }>, next: Next) => {
+  const headerSessionId = c.req.header('x-session-id');
+  let sessionId = headerSessionId || getCookie(c, 'session-id');
 
   // Auto-generate a session ID if none was provided
   if (!sessionId) {
     sessionId = crypto.randomUUID();
-    res.cookie('session-id', encodeURIComponent(sessionId), {
+    setCookie(c, 'session-id', encodeURIComponent(sessionId), {
       path: '/',
       sameSite: 'lax',
     });
   }
 
-  req.sessionID = sessionId;
+  c.set('sessionID', sessionId);
   Sentry.getIsolationScope().setTag('mcp_session_id', sessionId);
-  next();
-}
-
-// Health check
-app.get('/health', (_req, res) => {
-  const timestamp = new Date().toISOString();
-  const gitRev = process.env.GIT_REV || 'unknown';
-  res.type('text').send(`OK ${timestamp} GIT_REV: ${gitRev}`);
+  await next();
 });
 
-app.get('/api/sentry/config', (_, res) => {
+// Health check
+app.get('/health', (c) => {
+  const timestamp = new Date().toISOString();
+  const gitRev = process.env.GIT_REV || 'unknown';
+  return c.text(`OK ${timestamp} GIT_REV: ${gitRev}`);
+});
+
+app.get('/api/sentry/config', (c) => {
   console.log('Sentry config:', settings.SENTRY_DSN, settings.ENVIRONMENT);
-  res.json({
+  return c.json({
     dsn: settings.SENTRY_DSN,
     environment: settings.ENVIRONMENT,
   });
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.get('/test-error', (_req, _res) => {
+app.get('/test-error', (_c) => {
   throw new Error('Test error');
 });
 
-app.use('/api', requireSession);
-
-app.get('/api/news-source', (_, res) => {
-  res.json({
+app.get('/api/news-source', (c) => {
+  return c.json({
     success: true,
     data: newsSources.map((s) => ({ id: s.id, label: s.label })),
   });
 });
 
 // API Routes
-app.get('/api/news', async (req, res) => {
+app.get('/api/news', async (c) => {
   let browserId: string | undefined;
   let page: Page | undefined;
   let browser: Browser | undefined;
   try {
-    const sessionId = req.sessionID;
-    const xff = req.headers['x-forwarded-for'];
+    const sessionId = c.get('sessionID');
+    const xff = c.req.header('x-forwarded-for');
     const rawIp =
-      xff && typeof xff === 'string'
+      xff
         ? xff.split(',')[0].trim()
-        : req.ip || req.connection.remoteAddress || 'unknown';
+        : 'unknown';
     const clientIp = rawIp.startsWith('::ffff:') ? rawIp.slice(7) : rawIp;
-    const source = (req.query.source as string) || 'npr';
+    const source = c.req.query('source') || 'npr';
     const newsSource = newsSources.find((s) => s.id === source);
 
     const span = trace.getActiveSpan();
@@ -183,10 +168,10 @@ app.get('/api/news', async (req, res) => {
     const _headers: Record<string, string | string[] | undefined> = {
       Authorization: `Bearer ${settings.REMOTEBROWSER_APP_KEY}_${sessionId}`,
       'x-origin-ip': clientIp,
-      'user-agent': req.headers['user-agent'],
-      'sec-ch-ua': req.headers['sec-ch-ua'],
-      'sec-ch-ua-mobile': req.headers['sec-ch-ua-mobile'],
-      'sec-ch-ua-platform': req.headers['sec-ch-ua-platform'],
+      'user-agent': c.req.header('user-agent'),
+      'sec-ch-ua': c.req.header('sec-ch-ua'),
+      'sec-ch-ua-mobile': c.req.header('sec-ch-ua-mobile'),
+      'sec-ch-ua-platform': c.req.header('sec-ch-ua-platform'),
     };
     const headers: Record<string, string> = {};
     for (const [k, v] of Object.entries(_headers)) {
@@ -229,16 +214,17 @@ app.get('/api/news', async (req, res) => {
       }
     );
 
-    res.json({
+    return c.json({
       success: true,
       data,
     });
   } catch (error) {
     consola.error('Get News Error:', error as Error);
-    res.status(500).json({
+    Sentry.captureException(error);
+    return c.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    }, 500);
   } finally {
     if (browser) {
       try {
@@ -259,63 +245,59 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
-Sentry.setupExpressErrorHandler(app);
+// Global error handler
+app.onError((err, c) => {
+  consola.error('Unhandled server error', err, {
+    component: 'server',
+    operation: 'fallback-error-handler',
+    url: c.req.url,
+    method: c.req.method,
+  });
 
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _next: express.NextFunction
-  ) => {
-    consola.error('Unhandled server error', err, {
-      component: 'server',
-      operation: 'fallback-error-handler',
-      url: req.url,
-      method: req.method,
-    });
+  Sentry.captureException(err);
 
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: err.message,
-        timestamp: new Date().toISOString(),
-      });
-    }
-  }
-);
+  return c.json({
+    error: 'Internal Server Error',
+    message: err.message,
+    timestamp: new Date().toISOString(),
+  }, 500);
+});
 
 // Serve static files only in production
 if (process.env.NODE_ENV === 'production') {
-  // Serve static files from dist directory (after API routes)
-  app.use(express.static(path.join(__dirname, '..', 'dist')));
+  const distDir = path.join(__dirname, '..', 'dist');
 
-  // Catch-all handler: send back the app shell for any non-API, non-static routes
-  app.use((req, res, next) => {
-    // If it's an API route, let other handlers deal with it
-    if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
-      return next();
+  // Serve static assets (JS, CSS, images, etc.)
+  app.use('/static-assets/*', serveStatic({ root: distDir }));
+  app.use('/favicon.svg', serveStatic({ root: distDir }));
+  app.use('/favicon.ico', serveStatic({ root: distDir }));
+
+  // SPA fallback: serve index.html for any non-API, non-static route
+  app.get('*', (c) => {
+    // Skip API and health routes (they're handled above)
+    if (c.req.path.startsWith('/api/') || c.req.path === '/health') {
+      return c.notFound();
     }
-    // For all other routes, serve the app shell
-    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    try {
+      const html = readFileSync(path.join(distDir, 'index.html'), 'utf-8');
+      return c.html(html);
+    } catch {
+      return c.notFound();
+    }
   });
 }
 
-function startServer() {
-  try {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      if (process.env.NODE_ENV === 'production') {
-        console.log('Serving static files from dist/');
-      } else {
-        console.log('API only mode - use Vite dev server for frontend');
-      }
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+serve(
+  {
+    fetch: app.fetch,
+    port: Number(PORT),
+  },
+  (info) => {
+    console.log(`Server running on port ${info.port}`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Serving static files from dist/');
+    } else {
+      console.log('API only mode - use Vite dev server for frontend');
+    }
   }
-}
-
-startServer();
+);

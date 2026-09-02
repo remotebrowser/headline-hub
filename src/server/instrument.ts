@@ -1,6 +1,5 @@
 import * as logfire from '@pydantic/logfire-node';
 import * as Sentry from '@sentry/node';
-import { ExpressLayerType } from '@opentelemetry/instrumentation-express';
 import { consola, type ConsolaReporter, type LogObject } from 'consola';
 import { settings } from './config.js';
 
@@ -19,9 +18,6 @@ if (settings.LOGFIRE_TOKEN) {
       },
       '@opentelemetry/instrumentation-net': {
         enabled: false,
-      },
-      '@opentelemetry/instrumentation-express': {
-        ignoreLayersType: [ExpressLayerType.MIDDLEWARE],
       },
     },
   });
@@ -43,7 +39,6 @@ if (settings.SENTRY_DSN) {
           );
         },
       }),
-      Sentry.expressIntegration(),
     ],
     tracesSampleRate: settings.NODE_ENV === 'production' ? 1 : 0.5,
     environment: settings.ENVIRONMENT,
