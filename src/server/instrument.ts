@@ -21,6 +21,41 @@ if (settings.LOGFIRE_TOKEN) {
       },
     },
   });
+
+  const logfireReporter: ConsolaReporter = {
+    log(logObj: LogObject) {
+      const args = logObj.args;
+      const message =
+        args.find((a): a is string => typeof a === 'string') ?? '';
+      const error = args.find((a): a is Error => a instanceof Error);
+      const context = args.find(
+        (a): a is Record<string, unknown> =>
+          typeof a === 'object' && a !== null && !(a instanceof Error)
+      );
+
+      const attributes: Record<string, unknown> = { ...context };
+      if (error) {
+        attributes.error = error.message;
+        attributes.stack = error.stack;
+      }
+
+      switch (logObj.level) {
+        case 0:
+          logfire.error(message, attributes);
+          break;
+        case 1:
+          logfire.warning(message, attributes);
+          break;
+        case 4:
+          logfire.debug(message, attributes);
+          break;
+        default:
+          logfire.info(message, attributes);
+      }
+    },
+  };
+
+  consola.addReporter(logfireReporter);
 } else {
   console.log('⚠️  LOGFIRE_TOKEN not set - Logfire disabled');
 }
