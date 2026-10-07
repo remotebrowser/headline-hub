@@ -5,9 +5,16 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      gateway:
+        description: Deploy headline-hub-gateway
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_dispatch' || inputs.gateway
     name: Deploy headline-hub-gateway
     runs-on: ubuntu-22.04
     concurrency: deploy-headline-hub-gateway
