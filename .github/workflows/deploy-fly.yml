@@ -42,7 +42,7 @@ jobs:
       - uses: remotebrowser/shared-github-actions/deploy-fly@v1
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
-          doppler-project: lambda_gateway
+          doppler-project: headline-hub
           doppler-config: ${{ matrix.config }}
           app-name: ${{ matrix.app_name }}
           fly-toml: ${{ matrix.fly_toml }}
