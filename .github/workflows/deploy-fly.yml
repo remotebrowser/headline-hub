@@ -5,58 +5,19 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      demo:
-        description: Deploy headline-hub (demo)
-        required: false
-        type: boolean
-        default: true
-      lambda:
-        description: Deploy headline-hub-lambda
-        required: false
-        type: boolean
-        default: true
-      daytona:
-        description: Deploy headline-hub-daytona
-        required: false
-        type: boolean
-        default: true
 
 jobs:
-  prepare-matrix:
-    runs-on: ubuntu-22.04
-    outputs:
-      matrix: ${{ steps.pm.outputs.matrix }}
-    steps:
-      - id: pm
-        uses: remotebrowser/shared-github-actions/prepare-matrix@v1
-        with:
-          entries: |
-            { "env": "demo",    "config": "demo",    "app_name": "headline-hub",         "fly_toml": "fly.toml"        }
-            { "env": "lambda",  "config": "lambda",  "app_name": "headline-hub-lambda",  "fly_toml": "fly.lambda.toml" }
-            { "env": "daytona", "config": "daytona", "app_name": "headline-hub-daytona", "fly_toml": "fly.toml" }
-          selections: |
-            ${{ inputs.demo    && 'demo'    || '' }}
-            ${{ inputs.lambda  && 'lambda'  || '' }}
-            ${{ inputs.daytona && 'daytona' || '' }}
-          key-field: env
-
   deploy:
-    needs: prepare-matrix
-    name: Deploy ${{ matrix.app_name }}
+    name: Deploy headline-hub-gateway
     runs-on: ubuntu-22.04
-    concurrency: deploy-${{ matrix.app_name }}
+    concurrency: deploy-headline-hub-gateway
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
       - uses: remotebrowser/shared-github-actions/deploy-fly@v1
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
-          doppler-project: headline-hub
-          doppler-config: ${{ matrix.config }}
-          app-name: ${{ matrix.app_name }}
-          fly-toml: ${{ matrix.fly_toml }}
+          doppler-project: lambda_gateway
+          doppler-config: lambda_gateway
+          app-name: headline-hub-gateway
+          fly-toml: fly.toml
