@@ -13,18 +13,36 @@ on:
         default: true
 
 jobs:
-  deploy:
-    if: github.event_name != 'workflow_dispatch' || inputs.gateway
-    name: Deploy headline-hub-gateway
+  prepare-matrix:
     runs-on: ubuntu-22.04
-    concurrency: deploy-headline-hub-gateway
+    outputs:
+      matrix: ${{ steps.pm.outputs.matrix }}
+    steps:
+      - id: pm
+        uses: remotebrowser/shared-github-actions/prepare-matrix@v1
+        with:
+          entries: |
+            { "env": "gateway", "config": "lambda_gateway", "app_name": "headline-hub-gateway", "fly_toml": "fly.toml" }
+          selections: |
+            ${{ inputs.gateway && 'gateway' || '' }}
+          key-field: env
+
+  deploy:
+    needs: prepare-matrix
+    name: Deploy ${{ matrix.app_name }}
+    runs-on: ubuntu-22.04
+    concurrency: deploy-${{ matrix.app_name }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
       - uses: remotebrowser/shared-github-actions/deploy-fly@v1
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
           doppler-project: lambda_gateway
-          doppler-config: lambda_gateway
-          app-name: headline-hub-gateway
-          fly-toml: fly.toml
+          doppler-config: ${{ matrix.config }}
+          app-name: ${{ matrix.app_name }}
+          fly-toml: ${{ matrix.fly_toml }}
