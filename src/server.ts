@@ -14,6 +14,7 @@ import { readdirSync, statSync, readFileSync } from 'node:fs';
 import {
   createRemoteBrowser,
   destroyRemoteBrowser,
+  remoteBrowserAuthHeaders,
 } from './server/remoteBrowser.js';
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
@@ -49,6 +50,10 @@ const patterns: PatternEntry[] = readdirSync(patternsDir)
 const NAV_RETRY_ATTEMPTS = 30;
 const NAV_RETRY_INTERVAL_MS = 1000;
 
+// A freshly launched browser answers 404 on its CDP endpoint until it is ready.
+const CDP_RETRY_ATTEMPTS = 5;
+const CDP_RETRY_INTERVAL_MS = 3000;
+
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -78,7 +83,24 @@ const getCdpUrl = (browserId: string): string => {
 };
 
 const getBrowser = async (browserId: string): Promise<Browser> => {
-  return await chromium.connectOverCDP(getCdpUrl(browserId));
+  // The CDP upgrade needs the same API key as the REST calls.
+  const headers = remoteBrowserAuthHeaders();
+  const options = Object.keys(headers).length > 0 ? { headers } : undefined;
+  for (let attempt = 0; attempt < CDP_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await chromium.connectOverCDP(getCdpUrl(browserId), options);
+    } catch (err) {
+      consola.warn('CDP connection attempt failed, retrying...', {
+        attempt,
+        browserId,
+        err: (err as Error).message,
+      });
+      if (attempt < CDP_RETRY_ATTEMPTS - 1) {
+        await sleep(CDP_RETRY_INTERVAL_MS);
+      }
+    }
+  }
+  throw new Error(`Failed to connect to browser ${browserId} over CDP`);
 };
 
 const getPage = async (browser: Browser): Promise<Page> => {
@@ -145,7 +167,6 @@ app.get('/api/news', async (c) => {
   let page: Page | undefined;
   let browser: Browser | undefined;
   try {
-    const sessionId = c.get('sessionID');
     const xff = c.req.header('x-forwarded-for');
     const rawIp =
       xff
@@ -166,7 +187,7 @@ app.get('/api/news', async (c) => {
     }
 
     const _headers: Record<string, string | string[] | undefined> = {
-      Authorization: `Bearer ${settings.REMOTEBROWSER_APP_KEY}_${sessionId}`,
+      ...remoteBrowserAuthHeaders(),
       'x-origin-ip': clientIp,
       'user-agent': c.req.header('user-agent'),
       'sec-ch-ua': c.req.header('sec-ch-ua'),
