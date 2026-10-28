@@ -55,8 +55,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: remotebrowser/shared-github-actions/deploy-fly@v1
         with:
-          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
-          doppler-project: headline-hub
-          doppler-config: ${{ matrix.config }}
+          onepassword-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          fly-api-token: op://headline-hub/${{ matrix.config }}/FLY_API_TOKEN
+          # Each Fly secret of the app that is not listed here is unset.
+          onepassword-secrets: |
+            ENVIRONMENT=op://headline-hub/${{ matrix.config }}/ENVIRONMENT
+            LOGFIRE_TOKEN=op://headline-hub/${{ matrix.config }}/LOGFIRE_TOKEN
+            REMOTEBROWSER_URL=op://headline-hub/${{ matrix.config }}/REMOTEBROWSER_URL
+            SENTRY_DSN=op://headline-hub/${{ matrix.config }}/SENTRY_DSN
+            ${{ matrix.config == 'lambda' && 'TAILSCALE_AUTHKEY=op://headline-hub/lambda/TAILSCALE_AUTHKEY' || '' }}
           app-name: ${{ matrix.app_name }}
           fly-toml: ${{ matrix.fly_toml }}
