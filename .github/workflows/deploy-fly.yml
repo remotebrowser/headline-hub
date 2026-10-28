@@ -11,16 +11,6 @@ on:
         required: false
         type: boolean
         default: true
-      lambda:
-        description: Deploy headline-hub-lambda
-        required: false
-        type: boolean
-        default: true
-      daytona:
-        description: Deploy headline-hub-daytona
-        required: false
-        type: boolean
-        default: true
 
 jobs:
   prepare-matrix:
@@ -32,13 +22,9 @@ jobs:
         uses: remotebrowser/shared-github-actions/prepare-matrix@v1
         with:
           entries: |
-            { "env": "demo",    "config": "demo",    "app_name": "headline-hub",         "fly_toml": "fly.toml"        }
-            { "env": "lambda",  "config": "lambda",  "app_name": "headline-hub-lambda",  "fly_toml": "fly.lambda.toml" }
-            { "env": "daytona", "config": "daytona", "app_name": "headline-hub-daytona", "fly_toml": "fly.toml" }
+            { "env": "demo", "config": "demo", "app_name": "headline-hub", "fly_toml": "fly.toml" }
           selections: |
-            ${{ inputs.demo    && 'demo'    || '' }}
-            ${{ inputs.lambda  && 'lambda'  || '' }}
-            ${{ inputs.daytona && 'daytona' || '' }}
+            ${{ inputs.demo && 'demo' || '' }}
           key-field: env
 
   deploy:
@@ -63,6 +49,5 @@ jobs:
             LOGFIRE_TOKEN=op://headline-hub/${{ matrix.config }}/LOGFIRE_TOKEN
             REMOTEBROWSER_URL=op://headline-hub/${{ matrix.config }}/REMOTEBROWSER_URL
             SENTRY_DSN=op://headline-hub/${{ matrix.config }}/SENTRY_DSN
-            ${{ matrix.config == 'lambda' && 'TAILSCALE_AUTHKEY=op://headline-hub/lambda/TAILSCALE_AUTHKEY' || '' }}
           app-name: ${{ matrix.app_name }}
           fly-toml: ${{ matrix.fly_toml }}
