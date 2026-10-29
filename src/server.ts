@@ -19,7 +19,7 @@ import {
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
 import { convert, distill, parse, patternsDir } from './server/distill.js';
-import type { PatternEntry } from './server/distill.js';
+import type { DistillationResult, PatternEntry } from './server/distill.js';
 import { newsSources, settings } from './server/config.js';
 import { consola } from 'consola';
 
@@ -101,6 +101,24 @@ const getBrowser = async (browserId: string): Promise<Browser> => {
     }
   }
   throw new Error(`Failed to connect to browser ${browserId} over CDP`);
+};
+
+// Some sites (e.g. Ground News) load slowly or show a long interstitial first.
+const DISTILL_MAX_RETRIES = 5;
+const DISTILL_RETRY_INTERVAL_MS = 3000;
+
+const distillPage = async (
+  hostname: string,
+  page: Page
+): Promise<DistillationResult | undefined> => {
+  for (let attempt = 0; ; attempt++) {
+    const match = await distill(hostname, patterns, page);
+    if (match || attempt >= DISTILL_MAX_RETRIES) {
+      return match;
+    }
+    consola.warn('No pattern matched yet, retrying...', { attempt, hostname });
+    await sleep(DISTILL_RETRY_INTERVAL_MS);
+  }
 };
 
 const getPage = async (browser: Browser): Promise<Page> => {
@@ -211,7 +229,7 @@ app.get('/api/news', async (c) => {
     consola.start('Navigating to', { browserId, url: newsSource.url });
     await navigatePage(page, newsSource.url);
 
-    const match = await distill(hostname, patterns, page);
+    const match = await distillPage(hostname, page);
     if (!match) {
       throw new Error('No matching pattern found for the page');
     }
