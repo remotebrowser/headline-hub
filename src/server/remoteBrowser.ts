@@ -1,5 +1,14 @@
 import { settings } from './config.js';
 
+// The API key is the Bearer token for every Remote Browser call. Without one,
+// the calls go out unauthenticated, which a local server accepts.
+export function remoteBrowserAuthHeaders(): Record<string, string> {
+  if (!settings.REMOTEBROWSER_API_KEY) {
+    return {};
+  }
+  return { Authorization: `Bearer ${settings.REMOTEBROWSER_API_KEY}` };
+}
+
 export async function createRemoteBrowser(
   headers?: Record<string, string>
 ): Promise<string> {
@@ -19,5 +28,8 @@ export async function createRemoteBrowser(
 
 export async function destroyRemoteBrowser(browserId: string): Promise<void> {
   const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${browserId}`;
-  await fetch(url, { method: 'DELETE' });
+  await fetch(url, {
+    method: 'DELETE',
+    headers: remoteBrowserAuthHeaders(),
+  });
 }
