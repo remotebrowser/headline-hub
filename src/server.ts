@@ -51,8 +51,8 @@ const NAV_RETRY_ATTEMPTS = 30;
 const NAV_RETRY_INTERVAL_MS = 1000;
 
 // A freshly launched browser answers 404 on its CDP endpoint until it is ready.
-const CDP_RETRY_ATTEMPTS = 5;
-const CDP_RETRY_INTERVAL_MS = 3000;
+const CDP_RETRY_ATTEMPTS = 20;
+const CDP_RETRY_INTERVAL_MS = 500;
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -90,11 +90,12 @@ const getBrowser = async (browserId: string): Promise<Browser> => {
     try {
       return await chromium.connectOverCDP(getCdpUrl(browserId), options);
     } catch (err) {
-      consola.warn('CDP connection attempt failed, retrying...', {
-        attempt,
-        browserId,
-        err: (err as Error).message,
-      });
+      const details = { attempt, browserId, err: (err as Error).message };
+      if (attempt === 0) {
+        consola.debug('CDP not ready yet, retrying...', details);
+      } else {
+        consola.warn('CDP connection attempt failed, retrying...', details);
+      }
       if (attempt < CDP_RETRY_ATTEMPTS - 1) {
         await sleep(CDP_RETRY_INTERVAL_MS);
       }
