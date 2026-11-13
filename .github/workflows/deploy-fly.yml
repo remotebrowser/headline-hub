@@ -48,6 +48,8 @@ jobs:
             ENVIRONMENT=op://headline-hub/${{ matrix.config }}/ENVIRONMENT
             LOGFIRE_TOKEN=op://headline-hub/${{ matrix.config }}/LOGFIRE_TOKEN
             REMOTEBROWSER_URL=op://headline-hub/${{ matrix.config }}/REMOTEBROWSER_URL
+            REMOTEBROWSER_API_KEY=op://headline-hub/${{ matrix.config }}/REMOTEBROWSER_API_KEY
+            TAILSCALE_AUTHKEY=op://headline-hub/${{ matrix.config }}/TAILSCALE_AUTHKEY
             SENTRY_DSN=op://headline-hub/${{ matrix.config }}/SENTRY_DSN
           app-name: ${{ matrix.app_name }}
           fly-toml: ${{ matrix.fly_toml }}
