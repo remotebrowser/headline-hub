@@ -12,7 +12,7 @@ if [ -n "${TAILSCALE_AUTHKEY}" ]; then
 
     # Block until connected so the first request does not race the tunnel.
     echo "Authenticating with Tailscale..."
-    /app/tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=headline-hub --advertise-tags=tag:fly --timeout=30s \
+    /app/tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname="${FLY_APP_NAME:-headline-hub}" --advertise-tags=tag:fly --timeout=30s \
         || echo "Tailscale did not connect, starting the app anyway"
 
     echo "=== Tailscale Status ==="
