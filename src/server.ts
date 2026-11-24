@@ -11,26 +11,18 @@ import { trace } from '@opentelemetry/api';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readdirSync, statSync, readFileSync } from 'node:fs';
-import { RemoteBrowser } from '@remotebrowser/sdk';
+import {
+  createRemoteBrowser,
+  destroyRemoteBrowser,
+  remoteBrowserAuthHeaders,
+  remoteBrowserConnectUrl,
+} from './server/remoteBrowser.js';
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
 import { convert, distill, parse, patternsDir } from './server/distill.js';
 import type { DistillationResult, PatternEntry } from './server/distill.js';
 import { newsSources, settings } from './server/config.js';
 import { consola } from 'consola';
-
-const remoteBrowser = new RemoteBrowser({
-  apiKey: settings.REMOTEBROWSER_API_KEY || 'unset',
-  baseURL: settings.REMOTEBROWSER_URL,
-  fetch: (input, init) => {
-    if (settings.REMOTEBROWSER_API_KEY) {
-      return fetch(input, init);
-    }
-    const headers = new Headers(init?.headers);
-    headers.delete('Authorization');
-    return fetch(input, { ...init, headers });
-  },
-});
 
 type HeadlineItem = {
   title: string;
@@ -84,14 +76,12 @@ const navigatePage = async (page: Page, url: string): Promise<void> => {
 
 const getBrowser = async (browserId: string): Promise<Browser> => {
   // The CDP upgrade needs the same API key as the REST calls.
-  const headers = settings.REMOTEBROWSER_API_KEY
-    ? remoteBrowser.authHeaders
-    : {};
+  const headers = remoteBrowserAuthHeaders();
   const options = Object.keys(headers).length > 0 ? { headers } : undefined;
   for (let attempt = 0; attempt < CDP_RETRY_ATTEMPTS; attempt++) {
     try {
       return await chromium.connectOverCDP(
-        remoteBrowser.browsers.connectUrl(browserId),
+        remoteBrowserConnectUrl(browserId),
         options
       );
     } catch (err) {
@@ -227,11 +217,7 @@ app.get('/api/news', async (c) => {
     const hostname = new URL(newsSource.url).hostname;
 
     consola.start('Creating remote browser', { source });
-    // No retries: a retry after a lost response would leak a running browser.
-    ({ browser_id: browserId } = await remoteBrowser.browsers.create(
-      {},
-      { headers, maxRetries: 0 }
-    ));
+    browserId = await createRemoteBrowser(headers);
 
     browser = await getBrowser(browserId);
     page = await getPage(browser);
@@ -284,14 +270,10 @@ app.get('/api/news', async (c) => {
     }
     if (browserId) {
       try {
-        await remoteBrowser.browsers.delete(browserId, { timeout: 10_000 });
+        await destroyRemoteBrowser(browserId);
         consola.info('Browser destroyed', { browserId });
       } catch (e) {
-        if (e instanceof RemoteBrowser.NotFoundError) {
-          consola.info('Browser already gone', { browserId });
-        } else {
-          consola.error('Error destroying browser:', e as Error);
-        }
+        consola.error('Error destroying browser:', e as Error);
       }
     }
   }
