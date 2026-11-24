@@ -11,12 +11,8 @@ import { trace } from '@opentelemetry/api';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readdirSync, statSync, readFileSync } from 'node:fs';
-import {
-  createRemoteBrowser,
-  destroyRemoteBrowser,
-  remoteBrowserAuthHeaders,
-  remoteBrowserConnectUrl,
-} from './server/remoteBrowser.js';
+import { RemoteBrowser } from '@remotebrowser/sdk';
+import { remoteBrowser } from './server/remoteBrowser.js';
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
 import { convert, distill, parse, patternsDir } from './server/distill.js';
@@ -76,12 +72,14 @@ const navigatePage = async (page: Page, url: string): Promise<void> => {
 
 const getBrowser = async (browserId: string): Promise<Browser> => {
   // The CDP upgrade needs the same API key as the REST calls.
-  const headers = remoteBrowserAuthHeaders();
+  const headers = settings.REMOTEBROWSER_API_KEY
+    ? remoteBrowser.authHeaders
+    : {};
   const options = Object.keys(headers).length > 0 ? { headers } : undefined;
   for (let attempt = 0; attempt < CDP_RETRY_ATTEMPTS; attempt++) {
     try {
       return await chromium.connectOverCDP(
-        remoteBrowserConnectUrl(browserId),
+        remoteBrowser.browsers.connectUrl(browserId),
         options
       );
     } catch (err) {
@@ -217,7 +215,11 @@ app.get('/api/news', async (c) => {
     const hostname = new URL(newsSource.url).hostname;
 
     consola.start('Creating remote browser', { source });
-    browserId = await createRemoteBrowser(headers);
+    // No retries: a retry after a lost response would leak a running browser.
+    ({ browser_id: browserId } = await remoteBrowser.browsers.create(
+      {},
+      { headers, maxRetries: 0 }
+    ));
 
     browser = await getBrowser(browserId);
     page = await getPage(browser);
@@ -270,10 +272,14 @@ app.get('/api/news', async (c) => {
     }
     if (browserId) {
       try {
-        await destroyRemoteBrowser(browserId);
+        await remoteBrowser.browsers.delete(browserId, { timeout: 10_000 });
         consola.info('Browser destroyed', { browserId });
       } catch (e) {
-        consola.error('Error destroying browser:', e as Error);
+        if (e instanceof RemoteBrowser.NotFoundError) {
+          consola.info('Browser already gone', { browserId });
+        } else {
+          consola.error('Error destroying browser:', e as Error);
+        }
       }
     }
   }
