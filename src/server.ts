@@ -15,6 +15,7 @@ import {
   createRemoteBrowser,
   destroyRemoteBrowser,
   remoteBrowserAuthHeaders,
+  remoteBrowserConnectUrl,
 } from './server/remoteBrowser.js';
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
@@ -73,22 +74,16 @@ const navigatePage = async (page: Page, url: string): Promise<void> => {
   throw new Error(`Failed to navigate to ${url}`);
 };
 
-const getCdpUrl = (browserId: string): string => {
-  const baseUrl = settings.REMOTEBROWSER_URL.replace(/\/+$/, '');
-  const protocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
-  return (
-    baseUrl.replace(/^https?:\/\//, `${protocol}://`) +
-    `/api/v1/browsers/${browserId}/cdp`
-  );
-};
-
 const getBrowser = async (browserId: string): Promise<Browser> => {
   // The CDP upgrade needs the same API key as the REST calls.
   const headers = remoteBrowserAuthHeaders();
   const options = Object.keys(headers).length > 0 ? { headers } : undefined;
   for (let attempt = 0; attempt < CDP_RETRY_ATTEMPTS; attempt++) {
     try {
-      return await chromium.connectOverCDP(getCdpUrl(browserId), options);
+      return await chromium.connectOverCDP(
+        remoteBrowserConnectUrl(browserId),
+        options
+      );
     } catch (err) {
       const details = { attempt, browserId, err: (err as Error).message };
       if (attempt === 0) {
