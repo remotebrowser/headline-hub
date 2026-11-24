@@ -39,7 +39,7 @@ export async function destroyRemoteBrowser(browserId: string): Promise<void> {
   try {
     await client.browsers.delete(browserId, { timeout: 10_000 });
   } catch (err) {
-    if ((err as { status?: number }).status !== 404) {
+    if (!(err instanceof RemoteBrowser.NotFoundError)) {
       throw err;
     }
   }
