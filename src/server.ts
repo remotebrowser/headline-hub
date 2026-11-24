@@ -12,13 +12,27 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { RemoteBrowser } from '@remotebrowser/sdk';
-import { remoteBrowser } from './server/remoteBrowser.js';
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
 import { convert, distill, parse, patternsDir } from './server/distill.js';
 import type { DistillationResult, PatternEntry } from './server/distill.js';
 import { newsSources, settings } from './server/config.js';
 import { consola } from 'consola';
+
+// The SDK requires an API key, but a local server runs without one. Strip the
+// Authorization header in that case so the calls go out unauthenticated.
+const remoteBrowser = new RemoteBrowser({
+  apiKey: settings.REMOTEBROWSER_API_KEY || 'unset',
+  baseURL: settings.REMOTEBROWSER_URL,
+  fetch: (input, init) => {
+    if (settings.REMOTEBROWSER_API_KEY) {
+      return fetch(input, init);
+    }
+    const headers = new Headers(init?.headers);
+    headers.delete('Authorization');
+    return fetch(input, { ...init, headers });
+  },
+});
 
 type HeadlineItem = {
   title: string;
