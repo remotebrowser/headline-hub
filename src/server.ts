@@ -19,8 +19,6 @@ import type { DistillationResult, PatternEntry } from './server/distill.js';
 import { newsSources, settings } from './server/config.js';
 import { consola } from 'consola';
 
-// The SDK requires an API key, but a local server runs without one. Strip the
-// Authorization header in that case so the calls go out unauthenticated.
 const remoteBrowser = new RemoteBrowser({
   apiKey: settings.REMOTEBROWSER_API_KEY || 'unset',
   baseURL: settings.REMOTEBROWSER_URL,
