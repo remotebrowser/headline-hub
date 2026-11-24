@@ -201,7 +201,6 @@ app.get('/api/news', async (c) => {
     }
 
     const _headers: Record<string, string | string[] | undefined> = {
-      ...remoteBrowserAuthHeaders(),
       'x-origin-ip': clientIp,
       'user-agent': c.req.header('user-agent'),
       'sec-ch-ua': c.req.header('sec-ch-ua'),

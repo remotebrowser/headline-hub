@@ -36,5 +36,11 @@ export async function createRemoteBrowser(
 }
 
 export async function destroyRemoteBrowser(browserId: string): Promise<void> {
-  await client.browsers.delete(browserId);
+  try {
+    await client.browsers.delete(browserId, { timeout: 10_000 });
+  } catch (err) {
+    if ((err as { status?: number }).status !== 404) {
+      throw err;
+    }
+  }
 }
