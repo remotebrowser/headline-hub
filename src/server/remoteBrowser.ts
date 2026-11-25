@@ -1,35 +1,46 @@
+import { RemoteBrowser } from '@remotebrowser/sdk';
 import { settings } from './config.js';
 
-// The API key is the Bearer token for every Remote Browser call. Without one,
-// the calls go out unauthenticated, which a local server accepts.
+// The SDK requires an API key, but a local server runs without one. Strip the
+// Authorization header in that case so the calls go out unauthenticated.
+const client = new RemoteBrowser({
+  apiKey: settings.REMOTEBROWSER_API_KEY || 'unset',
+  baseURL: settings.REMOTEBROWSER_URL,
+  fetch: (input, init) => {
+    if (settings.REMOTEBROWSER_API_KEY) {
+      return fetch(input, init);
+    }
+    const headers = new Headers(init?.headers);
+    headers.delete('Authorization');
+    return fetch(input, { ...init, headers });
+  },
+});
+
 export function remoteBrowserAuthHeaders(): Record<string, string> {
-  if (!settings.REMOTEBROWSER_API_KEY) {
-    return {};
-  }
-  return { Authorization: `Bearer ${settings.REMOTEBROWSER_API_KEY}` };
+  return settings.REMOTEBROWSER_API_KEY ? client.authHeaders : {};
+}
+
+export function remoteBrowserConnectUrl(browserId: string): string {
+  return client.browsers.connectUrl(browserId);
 }
 
 export async function createRemoteBrowser(
   headers?: Record<string, string>
 ): Promise<string> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-  });
-  if (!response.ok) {
-    throw new Error(
-      `Failed to create remote browser: ${response.status} ${response.statusText}`
-    );
-  }
-  const { browser_id } = (await response.json()) as { browser_id: string };
+  // No retries: a retry after a lost response would leak a running browser.
+  const { browser_id } = await client.browsers.create(
+    {},
+    { headers, maxRetries: 0 }
+  );
   return browser_id;
 }
 
 export async function destroyRemoteBrowser(browserId: string): Promise<void> {
-  const url = `${settings.REMOTEBROWSER_URL}/api/v1/browsers/${browserId}`;
-  await fetch(url, {
-    method: 'DELETE',
-    headers: remoteBrowserAuthHeaders(),
-  });
+  try {
+    await client.browsers.delete(browserId, { timeout: 10_000 });
+  } catch (err) {
+    if (!(err instanceof RemoteBrowser.NotFoundError)) {
+      throw err;
+    }
+  }
 }
